@@ -21,6 +21,7 @@ type ServerConfig struct {
 	Port            int
 	ReadTimeout     time.Duration
 	WriteTimeout    time.Duration
+	IdleTimeout     time.Duration
 	ShutdownTimeout time.Duration
 	Environment     string // development, staging, production
 }
@@ -58,14 +59,15 @@ type AuthConfig struct {
 // Load loads configuration from environment variables
 func Load() (*Config, error) {
 	cfg := &Config{
-		Server: ServerConfig{
-			Host:            getEnv("SERVER_HOST", "0.0.0.0"),
-			Port:            getEnvAsInt("SERVER_PORT", 8080),
-			ReadTimeout:     getEnvAsDuration("SERVER_READ_TIMEOUT", 15*time.Second),
-			WriteTimeout:    getEnvAsDuration("SERVER_WRITE_TIMEOUT", 15*time.Second),
-			ShutdownTimeout: getEnvAsDuration("SERVER_SHUTDOWN_TIMEOUT", 30*time.Second),
-			Environment:     getEnv("ENVIRONMENT", "development"),
-		},
+	Server: ServerConfig{
+		Host:            getEnv("SERVER_HOST", "0.0.0.0"),
+		Port:            getEnvAsInt("SERVER_PORT", 8080),
+		ReadTimeout:     getEnvAsDuration("SERVER_READ_TIMEOUT", 15*time.Second),
+		WriteTimeout:    getEnvAsDuration("SERVER_WRITE_TIMEOUT", 15*time.Second),
+		IdleTimeout:     getEnvAsDuration("SERVER_IDLE_TIMEOUT", 120*time.Second),
+		ShutdownTimeout: getEnvAsDuration("SERVER_SHUTDOWN_TIMEOUT", 30*time.Second),
+		Environment:     getEnv("ENVIRONMENT", "development"),
+	},
 		Database: DatabaseConfig{
 			Type:            getEnv("DB_TYPE", "sqlite"),
 			Host:            getEnv("DB_HOST", "localhost"),

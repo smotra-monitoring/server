@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/smotra-monitoring/server/internal/config"
@@ -87,7 +86,7 @@ func main() {
 		Handler:      r,
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
-		IdleTimeout:  120 * time.Second,
+		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
 
 	// Server run context
