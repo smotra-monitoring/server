@@ -2,53 +2,27 @@ package database
 
 import (
 	"fmt"
-
-	"github.com/smotra-monitoring/server/internal/config"
 )
 
-// NewFromConfig creates a new database instance from application config
-func NewFromConfig(cfg config.DatabaseConfig) (Database, error) {
-	switch cfg.Type {
-	case "postgres":
-		pgConfig := PostgresConfig{
-			Config: Config{
-				Type:            cfg.Type,
-				MaxOpenConns:    cfg.MaxOpenConns,
-				MaxIdleConns:    cfg.MaxIdleConns,
-				ConnMaxLifetime: cfg.ConnMaxLifetime,
-				ConnMaxIdleTime: cfg.ConnMaxIdleTime,
-			},
-			Host:     cfg.Host,
-			Port:     cfg.Port,
-			Username: cfg.Username,
-			Password: cfg.Password,
-			Database: cfg.Database,
-			SSLMode:  cfg.SSLMode,
+// New creates a new database instance based on the provided configuration
+// For postgres, pass PostgresConfig; for sqlite, pass SQLiteConfig
+func New(cfg interface{}) (Database, error) {
+	switch c := cfg.(type) {
+	case PostgresConfig:
+		return newPostgresDB(c), nil
+	case *PostgresConfig:
+		if c == nil {
+			return nil, fmt.Errorf("postgres config is nil")
 		}
-		return NewWithPostgres(pgConfig), nil
-	case "sqlite":
-		sqliteConfig := SQLiteConfig{
-			Config: Config{
-				Type:            cfg.Type,
-				MaxOpenConns:    cfg.MaxOpenConns,
-				MaxIdleConns:    cfg.MaxIdleConns,
-				ConnMaxLifetime: cfg.ConnMaxLifetime,
-				ConnMaxIdleTime: cfg.ConnMaxIdleTime,
-			},
-			FilePath: cfg.FilePath,
+		return newPostgresDB(*c), nil
+	case SQLiteConfig:
+		return newSQLiteDB(c), nil
+	case *SQLiteConfig:
+		if c == nil {
+			return nil, fmt.Errorf("sqlite config is nil")
 		}
-		return NewWithSQLite(sqliteConfig), nil
+		return newSQLiteDB(*c), nil
 	default:
-		return nil, fmt.Errorf("unsupported database type: %s", cfg.Type)
+		return nil, fmt.Errorf("unsupported database config type: %T", cfg)
 	}
-}
-
-// NewWithPostgres creates a new PostgreSQL database instance
-func NewWithPostgres(config PostgresConfig) Database {
-	return NewPostgresDB(config)
-}
-
-// NewWithSQLite creates a new SQLite database instance
-func NewWithSQLite(config SQLiteConfig) Database {
-	return NewSQLiteDB(config)
 }

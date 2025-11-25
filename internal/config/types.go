@@ -5,14 +5,18 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/smotra-monitoring/server/internal/database"
 )
 
 // Config holds the application configuration
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Logging  LoggingConfig
-	Auth     AuthConfig
+	Server         ServerConfig
+	DatabaseType   string // postgres or sqlite
+	PostgresConfig *database.PostgresConfig
+	SQLiteConfig   *database.SQLiteConfig
+	Logging        LoggingConfig
+	Auth           AuthConfig
 }
 
 // ServerConfig holds server-specific configuration
@@ -24,23 +28,6 @@ type ServerConfig struct {
 	IdleTimeout     time.Duration
 	ShutdownTimeout time.Duration
 	Environment     string // development, staging, production
-}
-
-// DatabaseConfig holds database configuration
-type DatabaseConfig struct {
-	Type            string // postgres, sqlite
-	Host            string
-	Port            int
-	Username        string
-	Password        string
-	Database        string
-	SSLMode         string
-	MaxOpenConns    int
-	MaxIdleConns    int
-	ConnMaxLifetime time.Duration
-	ConnMaxIdleTime time.Duration
-	// SQLite specific
-	FilePath string
 }
 
 // LoggingConfig holds logging configuration
@@ -58,30 +45,19 @@ type AuthConfig struct {
 
 // Load loads configuration from environment variables
 func Load() (*Config, error) {
+	dbType := getEnv("DB_TYPE", "sqlite")
+
 	cfg := &Config{
-	Server: ServerConfig{
-		Host:            getEnv("SERVER_HOST", "0.0.0.0"),
-		Port:            getEnvAsInt("SERVER_PORT", 8080),
-		ReadTimeout:     getEnvAsDuration("SERVER_READ_TIMEOUT", 15*time.Second),
-		WriteTimeout:    getEnvAsDuration("SERVER_WRITE_TIMEOUT", 15*time.Second),
-		IdleTimeout:     getEnvAsDuration("SERVER_IDLE_TIMEOUT", 120*time.Second),
-		ShutdownTimeout: getEnvAsDuration("SERVER_SHUTDOWN_TIMEOUT", 30*time.Second),
-		Environment:     getEnv("ENVIRONMENT", "development"),
-	},
-		Database: DatabaseConfig{
-			Type:            getEnv("DB_TYPE", "sqlite"),
-			Host:            getEnv("DB_HOST", "localhost"),
-			Port:            getEnvAsInt("DB_PORT", 5432),
-			Username:        getEnv("DB_USERNAME", ""),
-			Password:        getEnv("DB_PASSWORD", ""),
-			Database:        getEnv("DB_DATABASE", "smotra"),
-			SSLMode:         getEnv("DB_SSLMODE", "disable"),
-			MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 25),
-			MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 5),
-			ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute),
-			ConnMaxIdleTime: getEnvAsDuration("DB_CONN_MAX_IDLE_TIME", 10*time.Minute),
-			FilePath:        getEnv("DB_FILEPATH", "./data/smotra.db"),
+		Server: ServerConfig{
+			Host:            getEnv("SERVER_HOST", "0.0.0.0"),
+			Port:            getEnvAsInt("SERVER_PORT", 8080),
+			ReadTimeout:     getEnvAsDuration("SERVER_READ_TIMEOUT", 15*time.Second),
+			WriteTimeout:    getEnvAsDuration("SERVER_WRITE_TIMEOUT", 15*time.Second),
+			IdleTimeout:     getEnvAsDuration("SERVER_IDLE_TIMEOUT", 120*time.Second),
+			ShutdownTimeout: getEnvAsDuration("SERVER_SHUTDOWN_TIMEOUT", 30*time.Second),
+			Environment:     getEnv("ENVIRONMENT", "development"),
 		},
+		DatabaseType: dbType,
 		Logging: LoggingConfig{
 			Level:  getEnv("LOG_LEVEL", "info"),
 			Format: getEnv("LOG_FORMAT", "json"),
@@ -90,6 +66,36 @@ func Load() (*Config, error) {
 			JWTSecret:     getEnv("JWT_SECRET", ""),
 			JWTExpiration: getEnvAsDuration("JWT_EXPIRATION", 24*time.Hour),
 		},
+	}
+
+	// Initialize database config based on type
+	if dbType == "postgres" {
+		cfg.PostgresConfig = &database.PostgresConfig{
+			Config: database.Config{
+				Type:            dbType,
+				MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 25),
+				MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 5),
+				ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute),
+				ConnMaxIdleTime: getEnvAsDuration("DB_CONN_MAX_IDLE_TIME", 10*time.Minute),
+			},
+			Host:     getEnv("DB_HOST", "localhost"),
+			Port:     getEnvAsInt("DB_PORT", 5432),
+			Username: getEnv("DB_USERNAME", ""),
+			Password: getEnv("DB_PASSWORD", ""),
+			Database: getEnv("DB_DATABASE", "smotra"),
+			SSLMode:  getEnv("DB_SSLMODE", "disable"),
+		}
+	} else {
+		cfg.SQLiteConfig = &database.SQLiteConfig{
+			Config: database.Config{
+				Type:            dbType,
+				MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 25),
+				MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 5),
+				ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute),
+				ConnMaxIdleTime: getEnvAsDuration("DB_CONN_MAX_IDLE_TIME", 10*time.Minute),
+			},
+			FilePath: getEnv("DB_FILEPATH", "./data/smotra.db"),
+		}
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -107,24 +113,32 @@ func (c *Config) Validate() error {
 	}
 
 	// Database validation
-	if c.Database.Type != "postgres" && c.Database.Type != "sqlite" {
-		return fmt.Errorf("invalid database type: %s (must be 'postgres' or 'sqlite')", c.Database.Type)
+	if c.DatabaseType != "postgres" && c.DatabaseType != "sqlite" {
+		return fmt.Errorf("invalid database type: %s (must be 'postgres' or 'sqlite')", c.DatabaseType)
 	}
 
-	if c.Database.Type == "postgres" {
-		if c.Database.Host == "" {
+	if c.DatabaseType == "postgres" {
+		if c.PostgresConfig == nil {
+			return fmt.Errorf("postgres config is required when database type is postgres")
+		}
+		if c.PostgresConfig.Host == "" {
 			return fmt.Errorf("database host is required for postgres")
 		}
-		if c.Database.Username == "" {
+		if c.PostgresConfig.Username == "" {
 			return fmt.Errorf("database username is required for postgres")
 		}
-		if c.Database.Database == "" {
+		if c.PostgresConfig.Database == "" {
 			return fmt.Errorf("database name is required for postgres")
 		}
 	}
 
-	if c.Database.Type == "sqlite" && c.Database.FilePath == "" {
-		return fmt.Errorf("database file path is required for sqlite")
+	if c.DatabaseType == "sqlite" {
+		if c.SQLiteConfig == nil {
+			return fmt.Errorf("sqlite config is required when database type is sqlite")
+		}
+		if c.SQLiteConfig.FilePath == "" {
+			return fmt.Errorf("database file path is required for sqlite")
+		}
 	}
 
 	// Logging validation

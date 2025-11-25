@@ -38,7 +38,12 @@ func main() {
 	)
 
 	// Initialize database
-	db, err := database.NewFromConfig(cfg.Database)
+	var db database.Database
+	if cfg.DatabaseType == "postgres" {
+		db, err = database.New(cfg.PostgresConfig)
+	} else {
+		db, err = database.New(cfg.SQLiteConfig)
+	}
 	if err != nil {
 		log.Error("failed to create database", "error", err)
 		os.Exit(1)
@@ -52,7 +57,7 @@ func main() {
 
 	defer db.Close()
 
-	log.Info("database connection established", "type", cfg.Database.Type)
+	log.Info("database connection established", "type", cfg.DatabaseType)
 
 	// Create router
 	r := chi.NewRouter()

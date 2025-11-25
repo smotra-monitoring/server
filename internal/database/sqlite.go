@@ -17,8 +17,8 @@ type SQLiteDB struct {
 	config SQLiteConfig
 }
 
-// NewSQLiteDB creates a new SQLite database instance
-func NewSQLiteDB(config SQLiteConfig) *SQLiteDB {
+// newSQLiteDB creates a new SQLite database instance
+func newSQLiteDB(config SQLiteConfig) *SQLiteDB {
 	return &SQLiteDB{
 		config: config,
 	}
