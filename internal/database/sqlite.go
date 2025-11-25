@@ -33,7 +33,7 @@ func (s *SQLiteDB) Open(ctx context.Context) error {
 	}
 
 	// Open database with additional pragmas for better performance
-	dsn := fmt.Sprintf("%s?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_cache_size=1000000", 
+	dsn := fmt.Sprintf("%s?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_cache_size=1000000",
 		s.config.FilePath)
 
 	db, err := sql.Open("sqlite3", dsn)
@@ -82,7 +82,7 @@ func (s *SQLiteDB) Ping(ctx context.Context) error {
 // Health returns health information about the database
 func (s *SQLiteDB) Health(ctx context.Context) (HealthInfo, error) {
 	start := time.Now()
-	
+
 	info := HealthInfo{
 		Status: "unhealthy",
 	}
@@ -100,7 +100,7 @@ func (s *SQLiteDB) Health(ctx context.Context) (HealthInfo, error) {
 	}
 
 	info.ResponseTime = time.Since(start)
-	
+
 	// Get connection stats
 	stats := s.db.Stats()
 	info.OpenConns = stats.OpenConnections

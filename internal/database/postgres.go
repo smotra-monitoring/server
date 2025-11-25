@@ -74,7 +74,7 @@ func (p *PostgresDB) Ping(ctx context.Context) error {
 // Health returns health information about the database
 func (p *PostgresDB) Health(ctx context.Context) (HealthInfo, error) {
 	start := time.Now()
-	
+
 	info := HealthInfo{
 		Status: "unhealthy",
 	}
@@ -92,7 +92,7 @@ func (p *PostgresDB) Health(ctx context.Context) (HealthInfo, error) {
 	}
 
 	info.ResponseTime = time.Since(start)
-	
+
 	// Get connection stats
 	stats := p.db.Stats()
 	info.OpenConns = stats.OpenConnections
