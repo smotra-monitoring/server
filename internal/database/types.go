@@ -32,18 +32,28 @@ type HealthInfo struct {
 	Message      string        `json:"message,omitempty"`
 }
 
-// Config holds database configuration
+// Config holds common database configuration
 type Config struct {
 	Type            string
-	Host            string
-	Port            int
-	Username        string
-	Password        string
-	Database        string
-	SSLMode         string
 	MaxOpenConns    int
 	MaxIdleConns    int
 	ConnMaxLifetime time.Duration
 	ConnMaxIdleTime time.Duration
-	FilePath        string // For SQLite
+}
+
+// PostgresConfig holds PostgreSQL-specific configuration
+type PostgresConfig struct {
+	Config
+	Host     string
+	Port     int
+	Username string
+	Password string
+	Database string
+	SSLMode  string
+}
+
+// SQLiteConfig holds SQLite-specific configuration
+type SQLiteConfig struct {
+	Config
+	FilePath string
 }

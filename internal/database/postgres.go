@@ -12,11 +12,11 @@ import (
 // PostgresDB implements the Database interface for PostgreSQL
 type PostgresDB struct {
 	db     *sql.DB
-	config Config
+	config PostgresConfig
 }
 
 // NewPostgresDB creates a new PostgreSQL database instance
-func NewPostgresDB(config Config) *PostgresDB {
+func NewPostgresDB(config PostgresConfig) *PostgresDB {
 	return &PostgresDB{
 		config: config,
 	}

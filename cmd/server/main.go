@@ -39,22 +39,7 @@ func main() {
 	)
 
 	// Initialize database
-	dbConfig := database.Config{
-		Type:            cfg.Database.Type,
-		Host:            cfg.Database.Host,
-		Port:            cfg.Database.Port,
-		Username:        cfg.Database.Username,
-		Password:        cfg.Database.Password,
-		Database:        cfg.Database.Database,
-		SSLMode:         cfg.Database.SSLMode,
-		MaxOpenConns:    cfg.Database.MaxOpenConns,
-		MaxIdleConns:    cfg.Database.MaxIdleConns,
-		ConnMaxLifetime: cfg.Database.ConnMaxLifetime,
-		ConnMaxIdleTime: cfg.Database.ConnMaxIdleTime,
-		FilePath:        cfg.Database.FilePath,
-	}
-
-	db, err := database.New(dbConfig)
+	db, err := database.NewFromConfig(cfg.Database)
 	if err != nil {
 		log.Error("failed to create database", "error", err)
 		os.Exit(1)
@@ -65,12 +50,10 @@ func main() {
 		log.Error("failed to open database", "error", err)
 		os.Exit(1)
 	}
+
 	defer db.Close()
 
 	log.Info("database connection established", "type", cfg.Database.Type)
-
-	// Initialize handlers
-	healthHandler := health.NewHandler(log, db, version)
 
 	// Create router
 	r := chi.NewRouter()
@@ -80,6 +63,9 @@ func main() {
 	r.Use(middleware.Recovery(log))
 	r.Use(middleware.Logger(log))
 	r.Use(middleware.CORS)
+
+	// Initialize handlers
+	healthHandler := health.NewHandler(log, db, version)
 
 	// Health check routes (no authentication required)
 	r.Get("/healthz", healthHandler.HealthCheck)

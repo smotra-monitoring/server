@@ -1,32 +1,54 @@
 package database
 
 import (
-	"context"
 	"fmt"
+
+	"github.com/smotra-monitoring/server/internal/config"
 )
 
-// New creates a new database instance based on the configuration
-func New(config Config) (Database, error) {
-	switch config.Type {
+// NewFromConfig creates a new database instance from application config
+func NewFromConfig(cfg config.DatabaseConfig) (Database, error) {
+	switch cfg.Type {
 	case "postgres":
-		return NewPostgresDB(config), nil
+		pgConfig := PostgresConfig{
+			Config: Config{
+				Type:            cfg.Type,
+				MaxOpenConns:    cfg.MaxOpenConns,
+				MaxIdleConns:    cfg.MaxIdleConns,
+				ConnMaxLifetime: cfg.ConnMaxLifetime,
+				ConnMaxIdleTime: cfg.ConnMaxIdleTime,
+			},
+			Host:     cfg.Host,
+			Port:     cfg.Port,
+			Username: cfg.Username,
+			Password: cfg.Password,
+			Database: cfg.Database,
+			SSLMode:  cfg.SSLMode,
+		}
+		return NewWithPostgres(pgConfig), nil
 	case "sqlite":
-		return NewSQLiteDB(config), nil
+		sqliteConfig := SQLiteConfig{
+			Config: Config{
+				Type:            cfg.Type,
+				MaxOpenConns:    cfg.MaxOpenConns,
+				MaxIdleConns:    cfg.MaxIdleConns,
+				ConnMaxLifetime: cfg.ConnMaxLifetime,
+				ConnMaxIdleTime: cfg.ConnMaxIdleTime,
+			},
+			FilePath: cfg.FilePath,
+		}
+		return NewWithSQLite(sqliteConfig), nil
 	default:
-		return nil, fmt.Errorf("unsupported database type: %s", config.Type)
+		return nil, fmt.Errorf("unsupported database type: %s", cfg.Type)
 	}
 }
 
-// MustOpen opens a database connection or panics
-func MustOpen(ctx context.Context, config Config) Database {
-	db, err := New(config)
-	if err != nil {
-		panic(fmt.Sprintf("failed to create database: %v", err))
-	}
+// NewWithPostgres creates a new PostgreSQL database instance
+func NewWithPostgres(config PostgresConfig) Database {
+	return NewPostgresDB(config)
+}
 
-	if err := db.Open(ctx); err != nil {
-		panic(fmt.Sprintf("failed to open database: %v", err))
-	}
-
-	return db
+// NewWithSQLite creates a new SQLite database instance
+func NewWithSQLite(config SQLiteConfig) Database {
+	return NewSQLiteDB(config)
 }

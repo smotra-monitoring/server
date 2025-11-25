@@ -14,11 +14,11 @@ import (
 // SQLiteDB implements the Database interface for SQLite
 type SQLiteDB struct {
 	db     *sql.DB
-	config Config
+	config SQLiteConfig
 }
 
 // NewSQLiteDB creates a new SQLite database instance
-func NewSQLiteDB(config Config) *SQLiteDB {
+func NewSQLiteDB(config SQLiteConfig) *SQLiteDB {
 	return &SQLiteDB{
 		config: config,
 	}
