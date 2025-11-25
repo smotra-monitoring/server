@@ -12,13 +12,13 @@ type Database interface {
 	Open(ctx context.Context) error
 	Close() error
 	Ping(ctx context.Context) error
-	
+
 	// Health check
 	Health(ctx context.Context) (HealthInfo, error)
-	
+
 	// Transaction management
 	BeginTx(ctx context.Context) (*sql.Tx, error)
-	
+
 	// Direct access to underlying connection (for migrations, etc.)
 	DB() *sql.DB
 }
