@@ -51,6 +51,7 @@ func Logger(log *logger.Logger) func(next http.Handler) http.Handler {
 				"status", wrapped.statusCode,
 				"bytes", wrapped.written,
 				"duration_ms", duration.Milliseconds(),
+				"X-Request-ID", w.Header().Get("X-Request-ID"),
 			)
 		})
 	}
