@@ -7,35 +7,6 @@ import (
 	"github.com/smotra-monitoring/server/internal/database"
 )
 
-// Default returns a Config with sensible default values
-func Default() *Config {
-	sqlLiteCfg := database.DefaultSQLiteConfig()
-
-	cfg := Config{
-		Server: ServerConfig{
-			Host:            "0.0.0.0",
-			Port:            8080,
-			ReadTimeout:     15 * time.Second,
-			WriteTimeout:    15 * time.Second,
-			IdleTimeout:     120 * time.Second,
-			ShutdownTimeout: 30 * time.Second,
-			Environment:     "development",
-		},
-		DatabaseType: "sqlite",
-		SQLiteConfig: &sqlLiteCfg,
-		Logging: LoggingConfig{
-			Level:  "info",
-			Format: "json",
-		},
-		Auth: AuthConfig{
-			JWTSecret:     "",
-			JWTExpiration: 24 * time.Hour,
-		},
-	}
-
-	return &cfg
-}
-
 // Config holds the application configuration
 type Config struct {
 	Server         ServerConfig             `json:"server" yaml:"server"`
@@ -123,4 +94,45 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+// Default returns a Config with sensible default values
+func Default() *Config {
+	sqlLiteCfg := database.DefaultSQLiteConfig()
+
+	cfg := Config{
+		Server:       DefaultServerConfig(),
+		DatabaseType: "sqlite",
+		SQLiteConfig: &sqlLiteCfg,
+		Logging:      DefaultLoggingConfig(),
+		Auth:         DefaultAuthConfig(),
+	}
+
+	return &cfg
+}
+
+func DefaultServerConfig() ServerConfig {
+	return ServerConfig{
+		Host:            "0.0.0.0",
+		Port:            8080,
+		ReadTimeout:     15 * time.Second,
+		WriteTimeout:    15 * time.Second,
+		IdleTimeout:     120 * time.Second,
+		ShutdownTimeout: 30 * time.Second,
+		Environment:     "development",
+	}
+}
+
+func DefaultLoggingConfig() LoggingConfig {
+	return LoggingConfig{
+		Level:  "info",
+		Format: "json",
+	}
+}
+
+func DefaultAuthConfig() AuthConfig {
+	return AuthConfig{
+		JWTSecret:     "",
+		JWTExpiration: 24 * time.Hour,
+	}
 }

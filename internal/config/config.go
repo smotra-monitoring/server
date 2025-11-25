@@ -36,11 +36,12 @@ func loadFromFile(filepath string) (*Config, error) {
 	if err == nil {
 		return cfg, nil
 	}
+
 	// Try JSON
-	err = json.Unmarshal(data, cfg)
-	if err != nil {
-		return nil, err
+	jsonErr := json.Unmarshal(data, cfg)
+	if jsonErr == nil {
+		return cfg, nil
 	}
 
-	return nil, fmt.Errorf("failed to parse config file (tried YAML and JSON): %w", err)
+	return nil, fmt.Errorf("failed to parse config file as YAML or JSON: YAML error: %w, JSON error: %v", err, jsonErr)
 }

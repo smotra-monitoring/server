@@ -21,15 +21,46 @@ run: ## Run the server (development mode)
 	@echo "Running server with $(CONFIG_FILE)..."
 	@go run $(MAIN_PATH) -c $(CONFIG_FILE)
 
-test: ## Run tests
-	@echo "Running tests..."
+test: ## Run all tests (unit + integration)
+	@echo "Running all tests..."
 	@go test -v ./...
 
-test-coverage: ## Run tests with coverage
+test-unit: ## Run unit tests only
+	@echo "Running unit tests..."
+	@go test -v -short ./...
+
+test-integration: ## Run integration tests only
+	@echo "Running integration tests..."
+	@go test -v -tags=integration ./...
+
+test-coverage: ## Run tests with coverage report
 	@echo "Running tests with coverage..."
 	@go test -coverprofile=coverage.out ./...
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
+
+test-coverage-unit: ## Run unit tests with coverage
+	@echo "Running unit tests with coverage..."
+	@go test -short -coverprofile=coverage.out ./...
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "Unit test coverage report generated: coverage.html"
+
+test-coverage-integration: ## Run integration tests with coverage
+	@echo "Running integration tests with coverage..."
+	@go test -tags=integration -coverprofile=coverage-integration.out ./...
+	@go tool cover -html=coverage-integration.out -o coverage-integration.html
+	@echo "Integration test coverage report generated: coverage-integration.html"
+
+test-verbose: ## Run tests with verbose output
+	@echo "Running tests with verbose output..."
+	@go test -v -cover ./...
+
+test-watch: ## Run tests in watch mode (requires gotestsum)
+	@if command -v gotestsum > /dev/null; then \
+		gotestsum --watch -- -v ./...; \
+	else \
+		echo "gotestsum not found. Install it with: go install gotest.tools/gotestsum@latest"; \
+	fi
 
 clean: ## Clean build artifacts
 	@echo "Cleaning..."

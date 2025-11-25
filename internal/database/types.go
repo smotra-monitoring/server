@@ -34,28 +34,28 @@ type HealthInfo struct {
 
 // Config holds common database configuration
 type Config struct {
-	Type            string
-	MaxOpenConns    int
-	MaxIdleConns    int
-	ConnMaxLifetime time.Duration
-	ConnMaxIdleTime time.Duration
+	Type            string        `json:"type" yaml:"type"`
+	MaxOpenConns    int           `json:"max_open_conns" yaml:"maxopenconns"`
+	MaxIdleConns    int           `json:"max_idle_conns" yaml:"maxidleconns"`
+	ConnMaxLifetime time.Duration `json:"conn_max_lifetime" yaml:"connmaxlifetime"`
+	ConnMaxIdleTime time.Duration `json:"conn_max_idle_time" yaml:"connmaxidletime"`
 }
 
 // PostgresConfig holds PostgreSQL-specific configuration
 type PostgresConfig struct {
-	Config
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
-	SSLMode  string
+	Config   `yaml:",inline"`
+	Host     string `json:"host" yaml:"host"`
+	Port     int    `json:"port" yaml:"port"`
+	Username string `json:"username" yaml:"username"`
+	Password string `json:"password" yaml:"password"`
+	Database string `json:"database" yaml:"database"`
+	SSLMode  string `json:"sslmode" yaml:"sslmode"`
 }
 
 // SQLiteConfig holds SQLite-specific configuration
 type SQLiteConfig struct {
-	Config
-	FilePath string
+	Config   `yaml:"config,inline"`
+	FilePath string `json:"file_path" yaml:"filepath"`
 }
 
 // DefaultConfig returns a default database configuration
