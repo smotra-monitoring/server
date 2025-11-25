@@ -16,26 +16,30 @@ This guide will help you get the server running quickly.
 # Clone the repository
 git clone https://github.com/smotra-monitoring/server.git
 cd server
-
-# Copy the example environment file
-cp .env.example .env
-
-# Edit .env with your configuration (optional, defaults work for development)
-# nano .env
 ```
 
-### 2. Run with SQLite (Development)
+### 2. Create Configuration File
+
+```bash
+# Copy the example configuration file
+cp config.example.yaml config.yaml
+
+# Edit config.yaml with your settings (optional, defaults work for development)
+# nano config.yaml
+```
+
+### 3. Run with SQLite (Development)
 
 The default configuration uses SQLite, which requires no additional setup:
 
 ```bash
-# Build and run
-go run cmd/server/main.go
+# Run with config file
+CONFIG_FILE=config.yaml go run cmd/server/main.go
 ```
 
 The server will start on `http://localhost:8080`
 
-### 3. Test the Server
+### 4. Test the Server
 
 ```bash
 # Health check
@@ -51,53 +55,155 @@ curl http://localhost:8080/healthz/live
 curl http://localhost:8080/api/v1
 ```
 
-### 4. Using PostgreSQL (Production)
+### 5. Using PostgreSQL (Production)
 
-Edit your `.env` file:
+Edit your `config.yaml` file:
 
-```bash
-DB_TYPE=postgres
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=smotra
-DB_PASSWORD=your_password
-DB_DATABASE=smotra
-DB_SSLMODE=disable  # Use 'require' or 'verify-full' in production
+```yaml
+server:
+  environment: production
+
+database_type: postgres
+
+postgres_config:
+  type: postgres
+  host: localhost
+  port: 5432
+  username: smotra
+  password: your_password
+  database: smotra
+  sslmode: require
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 5m
+  conn_max_idle_time: 10m
 ```
 
 Then start the server:
 
 ```bash
-go run cmd/server/main.go
+CONFIG_FILE=config.yaml go run cmd/server/main.go
 ```
 
-## Configuration Options
+## Configuration
 
-All configuration is done through environment variables. See `.env.example` for all available options.
+The server is configured using a YAML or JSON configuration file. The path to the configuration file must be specified via the `CONFIG_FILE` environment variable.
 
-### Key Configuration
+### Configuration File Format
 
-- `SERVER_PORT`: HTTP server port (default: 8080)
-- `ENVIRONMENT`: development, staging, or production
-- `DB_TYPE`: sqlite or postgres
-- `LOG_LEVEL`: debug, info, warn, or error
-- `LOG_FORMAT`: json or text
+Both YAML and JSON formats are supported. See `config.example.yaml` or `config.example.json` for complete examples.
+
+**YAML format (config.yaml):**
+```yaml
+server:
+  host: 0.0.0.0
+  port: 8080
+  read_timeout: 15s
+  write_timeout: 15s
+  idle_timeout: 120s
+  shutdown_timeout: 30s
+  environment: development
+
+database_type: sqlite
+
+sqlite_config:
+  type: sqlite
+  filepath: ./data/smotra.db
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 5m
+  conn_max_idle_time: 10m
+
+logging:
+  level: info
+  format: json
+
+auth:
+  jwt_secret: ""
+  jwt_expiration: 24h
+```
+
+**JSON format (config.json):**
+```json
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "read_timeout": "15s",
+    "write_timeout": "15s",
+    "idle_timeout": "120s",
+    "shutdown_timeout": "30s",
+    "environment": "development"
+  },
+  "database_type": "sqlite",
+  "sqlite_config": {
+    "type": "sqlite",
+    "filepath": "./data/smotra.db",
+    "max_open_conns": 25,
+    "max_idle_conns": 5,
+    "conn_max_lifetime": "5m",
+    "conn_max_idle_time": "10m"
+  },
+  "logging": {
+    "level": "info",
+    "format": "json"
+  },
+  "auth": {
+    "jwt_secret": "",
+    "jwt_expiration": "24h"
+  }
+}
+```
+
+### Configuration Fields
+
+#### Server
+- `host`: HTTP server host (default: 0.0.0.0)
+- `port`: HTTP server port (default: 8080)
+- `read_timeout`: Read timeout duration (default: 15s)
+- `write_timeout`: Write timeout duration (default: 15s)
+- `idle_timeout`: Idle timeout duration (default: 120s)
+- `shutdown_timeout`: Graceful shutdown timeout (default: 30s)
+- `environment`: development, staging, or production
+
+#### Database
+- `database_type`: sqlite or postgres
+
+**For SQLite:**
+- `filepath`: Database file path (default: ./data/smotra.db)
+- `max_open_conns`: Maximum open connections (default: 25)
+- `max_idle_conns`: Maximum idle connections (default: 5)
+- `conn_max_lifetime`: Connection max lifetime (default: 5m)
+- `conn_max_idle_time`: Connection max idle time (default: 10m)
+
+**For PostgreSQL:**
+- `host`: Database host
+- `port`: Database port (default: 5432)
+- `username`: Database username
+- `password`: Database password
+- `database`: Database name
+- `sslmode`: SSL mode (disable, require, verify-full)
+- `max_open_conns`: Maximum open connections (default: 25)
+- `max_idle_conns`: Maximum idle connections (default: 5)
+- `conn_max_lifetime`: Connection max lifetime (default: 5m)
+- `conn_max_idle_time`: Connection max idle time (default: 10m)
+
+#### Logging
+- `level`: debug, info, warn, or error
+- `format`: json or text
+
+#### Authentication
+- `jwt_secret`: JWT signing secret (required in production)
+- `jwt_expiration`: JWT token expiration duration (default: 24h)
 
 ## Building for Production
 
 ```bash
 # Build the binary
-go build -o server cmd/server/main.go
+go build -o bin/server cmd/server/main.go
 
-# Run the binary
-./server
-```
-
-Or with custom output location:
-
-```bash
-go build -o bin/smotra-server cmd/server/main.go
-./bin/smotra-server
+# Run the binary with config file
+CONFIG_FILE=config.yaml ./bin/server
 ```
 
 ## Docker Support (Coming Soon)
@@ -161,10 +267,25 @@ go fmt ./...
 
 ### Port Already in Use
 
-If port 8080 is already in use, change it in `.env`:
+If port 8080 is already in use, change it in your `config.yaml`:
+
+```yaml
+server:
+  port: 8081
+```
+
+### Missing Configuration File
+
+If you see an error about `CONFIG_FILE` not being set:
 
 ```bash
-SERVER_PORT=8081
+CONFIG_FILE environment variable must be set
+```
+
+Make sure to specify the config file path:
+
+```bash
+CONFIG_FILE=config.yaml ./bin/server
 ```
 
 ## Next Steps

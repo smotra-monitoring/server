@@ -20,7 +20,13 @@ const version = "0.0.1"
 
 func main() {
 	// Load configuration
-	cfg, err := config.Load()
+	configFile := os.Getenv("CONFIG_FILE")
+	if configFile == "" {
+		fmt.Fprintf(os.Stderr, "CONFIG_FILE environment variable must be set\n")
+		os.Exit(1)
+	}
+
+	cfg, err := config.LoadAndValidate(configFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load configuration: %v\n", err)
 		os.Exit(1)

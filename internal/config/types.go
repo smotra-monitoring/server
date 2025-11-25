@@ -2,107 +2,72 @@ package config
 
 import (
 	"fmt"
-	"os"
-	"strconv"
 	"time"
 
 	"github.com/smotra-monitoring/server/internal/database"
 )
 
+// Default returns a Config with sensible default values
+func Default() *Config {
+	sqlLiteCfg := database.DefaultSQLiteConfig()
+
+	cfg := Config{
+		Server: ServerConfig{
+			Host:            "0.0.0.0",
+			Port:            8080,
+			ReadTimeout:     15 * time.Second,
+			WriteTimeout:    15 * time.Second,
+			IdleTimeout:     120 * time.Second,
+			ShutdownTimeout: 30 * time.Second,
+			Environment:     "development",
+		},
+		DatabaseType: "sqlite",
+		SQLiteConfig: &sqlLiteCfg,
+		Logging: LoggingConfig{
+			Level:  "info",
+			Format: "json",
+		},
+		Auth: AuthConfig{
+			JWTSecret:     "",
+			JWTExpiration: 24 * time.Hour,
+		},
+	}
+
+	return &cfg
+}
+
 // Config holds the application configuration
 type Config struct {
-	Server         ServerConfig
-	DatabaseType   string // postgres or sqlite
-	PostgresConfig *database.PostgresConfig
-	SQLiteConfig   *database.SQLiteConfig
-	Logging        LoggingConfig
-	Auth           AuthConfig
+	Server         ServerConfig             `json:"server" yaml:"server"`
+	DatabaseType   string                   `json:"database_type" yaml:"database_type"` // postgres or sqlite
+	PostgresConfig *database.PostgresConfig `json:"postgres_config,omitempty" yaml:"postgres_config,omitempty"`
+	SQLiteConfig   *database.SQLiteConfig   `json:"sqlite_config,omitempty" yaml:"sqlite_config,omitempty"`
+	Logging        LoggingConfig            `json:"logging" yaml:"logging"`
+	Auth           AuthConfig               `json:"auth" yaml:"auth"`
 }
 
 // ServerConfig holds server-specific configuration
 type ServerConfig struct {
-	Host            string
-	Port            int
-	ReadTimeout     time.Duration
-	WriteTimeout    time.Duration
-	IdleTimeout     time.Duration
-	ShutdownTimeout time.Duration
-	Environment     string // development, staging, production
+	Host            string        `json:"host" yaml:"host"`
+	Port            int           `json:"port" yaml:"port"`
+	ReadTimeout     time.Duration `json:"read_timeout" yaml:"read_timeout"`
+	WriteTimeout    time.Duration `json:"write_timeout" yaml:"write_timeout"`
+	IdleTimeout     time.Duration `json:"idle_timeout" yaml:"idle_timeout"`
+	ShutdownTimeout time.Duration `json:"shutdown_timeout" yaml:"shutdown_timeout"`
+	Environment     string        `json:"environment" yaml:"environment"` // development, staging, production
 }
 
 // LoggingConfig holds logging configuration
 type LoggingConfig struct {
-	Level  string // debug, info, warn, error
-	Format string // json, text
+	Level  string `json:"level" yaml:"level"`   // debug, info, warn, error
+	Format string `json:"format" yaml:"format"` // json, text
 }
 
 // AuthConfig holds authentication configuration
 type AuthConfig struct {
-	JWTSecret     string
-	JWTExpiration time.Duration
+	JWTSecret     string        `json:"jwt_secret" yaml:"jwt_secret"`
+	JWTExpiration time.Duration `json:"jwt_expiration" yaml:"jwt_expiration"`
 	// OAuth2 settings can be added here
-}
-
-// Load loads configuration from environment variables
-func Load() (*Config, error) {
-	dbType := getEnv("DB_TYPE", "sqlite")
-
-	cfg := &Config{
-		Server: ServerConfig{
-			Host:            getEnv("SERVER_HOST", "0.0.0.0"),
-			Port:            getEnvAsInt("SERVER_PORT", 8080),
-			ReadTimeout:     getEnvAsDuration("SERVER_READ_TIMEOUT", 15*time.Second),
-			WriteTimeout:    getEnvAsDuration("SERVER_WRITE_TIMEOUT", 15*time.Second),
-			IdleTimeout:     getEnvAsDuration("SERVER_IDLE_TIMEOUT", 120*time.Second),
-			ShutdownTimeout: getEnvAsDuration("SERVER_SHUTDOWN_TIMEOUT", 30*time.Second),
-			Environment:     getEnv("ENVIRONMENT", "development"),
-		},
-		DatabaseType: dbType,
-		Logging: LoggingConfig{
-			Level:  getEnv("LOG_LEVEL", "info"),
-			Format: getEnv("LOG_FORMAT", "json"),
-		},
-		Auth: AuthConfig{
-			JWTSecret:     getEnv("JWT_SECRET", ""),
-			JWTExpiration: getEnvAsDuration("JWT_EXPIRATION", 24*time.Hour),
-		},
-	}
-
-	// Initialize database config based on type
-	if dbType == "postgres" {
-		cfg.PostgresConfig = &database.PostgresConfig{
-			Config: database.Config{
-				Type:            dbType,
-				MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 25),
-				MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 5),
-				ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute),
-				ConnMaxIdleTime: getEnvAsDuration("DB_CONN_MAX_IDLE_TIME", 10*time.Minute),
-			},
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnvAsInt("DB_PORT", 5432),
-			Username: getEnv("DB_USERNAME", ""),
-			Password: getEnv("DB_PASSWORD", ""),
-			Database: getEnv("DB_DATABASE", "smotra"),
-			SSLMode:  getEnv("DB_SSLMODE", "disable"),
-		}
-	} else {
-		cfg.SQLiteConfig = &database.SQLiteConfig{
-			Config: database.Config{
-				Type:            dbType,
-				MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 25),
-				MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 5),
-				ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute),
-				ConnMaxIdleTime: getEnvAsDuration("DB_CONN_MAX_IDLE_TIME", 10*time.Minute),
-			},
-			FilePath: getEnv("DB_FILEPATH", "./data/smotra.db"),
-		}
-	}
-
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("configuration validation failed: %w", err)
-	}
-
-	return cfg, nil
 }
 
 // Validate validates the configuration
@@ -158,32 +123,4 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
-}
-
-// getEnv retrieves an environment variable or returns a default value
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-// getEnvAsInt retrieves an environment variable as an integer or returns a default value
-func getEnvAsInt(key string, defaultValue int) int {
-	if value := os.Getenv(key); value != "" {
-		if intValue, err := strconv.Atoi(value); err == nil {
-			return intValue
-		}
-	}
-	return defaultValue
-}
-
-// getEnvAsDuration retrieves an environment variable as a duration or returns a default value
-func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
-	if value := os.Getenv(key); value != "" {
-		if duration, err := time.ParseDuration(value); err == nil {
-			return duration
-		}
-	}
-	return defaultValue
 }

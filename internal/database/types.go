@@ -57,3 +57,37 @@ type SQLiteConfig struct {
 	Config
 	FilePath string
 }
+
+// DefaultConfig returns a default database configuration
+func DefaultConfig() Config {
+	return Config{
+		Type:            "",
+		MaxOpenConns:    25,
+		MaxIdleConns:    5,
+		ConnMaxLifetime: 15 * time.Minute,
+		ConnMaxIdleTime: 5 * time.Minute,
+	}
+}
+
+func DefaultSQLiteConfig() SQLiteConfig {
+	config := DefaultConfig()
+	config.Type = "sqlite"
+	return SQLiteConfig{
+		Config:   config,
+		FilePath: "./data/smotra.db",
+	}
+}
+
+func DefaultPostgresConfig() PostgresConfig {
+	config := DefaultConfig()
+	config.Type = "postgres"
+	return PostgresConfig{
+		Config:   config,
+		Host:     "localhost",
+		Port:     5432,
+		Username: "smotra",
+		Password: "changeme",
+		Database: "smotra",
+		SSLMode:  "disable",
+	}
+}
