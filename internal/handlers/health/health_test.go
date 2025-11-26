@@ -66,7 +66,15 @@ func TestHandler_HealthCheck_Healthy(t *testing.T) {
 	req := httptest.NewRequest("GET", "/healthz", nil)
 	rec := httptest.NewRecorder()
 
-	handler.HealthCheck(rec, req)
+	request := api.HealthCheckRequestObject{}
+	response, err := handler.HealthCheck(req.Context(), request)
+	if err != nil {
+		t.Fatalf("HealthCheck failed: %v", err)
+	}
+
+	if err := response.VisitHealthCheckResponse(rec); err != nil {
+		t.Fatalf("Failed to write response: %v", err)
+	}
 
 	if rec.Code != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", rec.Code)
@@ -100,7 +108,15 @@ func TestHandler_HealthCheck_Unhealthy(t *testing.T) {
 	req := httptest.NewRequest("GET", "/healthz", nil)
 	rec := httptest.NewRecorder()
 
-	handler.HealthCheck(rec, req)
+	request := api.HealthCheckRequestObject{}
+	response, err := handler.HealthCheck(req.Context(), request)
+	if err != nil {
+		t.Fatalf("HealthCheck failed: %v", err)
+	}
+
+	if err := response.VisitHealthCheckResponse(rec); err != nil {
+		t.Fatalf("Failed to write response: %v", err)
+	}
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Errorf("Expected status 503, got %d", rec.Code)
@@ -125,7 +141,15 @@ func TestHandler_HealthCheck_Components(t *testing.T) {
 	req := httptest.NewRequest("GET", "/healthz", nil)
 	rec := httptest.NewRecorder()
 
-	handler.HealthCheck(rec, req)
+	request := api.HealthCheckRequestObject{}
+	response, err := handler.HealthCheck(req.Context(), request)
+	if err != nil {
+		t.Fatalf("HealthCheck failed: %v", err)
+	}
+
+	if err := response.VisitHealthCheckResponse(rec); err != nil {
+		t.Fatalf("Failed to write response: %v", err)
+	}
 
 	var status api.HealthStatus
 	if err := json.Unmarshal(rec.Body.Bytes(), &status); err != nil {
@@ -152,15 +176,18 @@ func TestHandler_ReadinessCheck_Ready(t *testing.T) {
 	req := httptest.NewRequest("GET", "/healthz/ready", nil)
 	rec := httptest.NewRecorder()
 
-	handler.ReadinessCheck(rec, req)
+	request := api.ReadinessCheckRequestObject{}
+	response, err := handler.ReadinessCheck(req.Context(), request)
+	if err != nil {
+		t.Fatalf("ReadinessCheck failed: %v", err)
+	}
+
+	if err := response.VisitReadinessCheckResponse(rec); err != nil {
+		t.Fatalf("Failed to write response: %v", err)
+	}
 
 	if rec.Code != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", rec.Code)
-	}
-
-	body := rec.Body.String()
-	if body != "ready" {
-		t.Errorf("Expected body 'ready', got %s", body)
 	}
 }
 
@@ -174,15 +201,18 @@ func TestHandler_ReadinessCheck_NotReady(t *testing.T) {
 	req := httptest.NewRequest("GET", "/healthz/ready", nil)
 	rec := httptest.NewRecorder()
 
-	handler.ReadinessCheck(rec, req)
+	request := api.ReadinessCheckRequestObject{}
+	response, err := handler.ReadinessCheck(req.Context(), request)
+	if err != nil {
+		t.Fatalf("ReadinessCheck failed: %v", err)
+	}
+
+	if err := response.VisitReadinessCheckResponse(rec); err != nil {
+		t.Fatalf("Failed to write response: %v", err)
+	}
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Errorf("Expected status 503, got %d", rec.Code)
-	}
-
-	body := rec.Body.String()
-	if body != "not ready" {
-		t.Errorf("Expected body 'not ready', got %s", body)
 	}
 }
 
@@ -197,15 +227,18 @@ func TestHandler_ReadinessCheck_DatabaseDown(t *testing.T) {
 	req := httptest.NewRequest("GET", "/healthz/ready", nil)
 	rec := httptest.NewRecorder()
 
-	handler.ReadinessCheck(rec, req)
+	request := api.ReadinessCheckRequestObject{}
+	response, err := handler.ReadinessCheck(req.Context(), request)
+	if err != nil {
+		t.Fatalf("ReadinessCheck failed: %v", err)
+	}
+
+	if err := response.VisitReadinessCheckResponse(rec); err != nil {
+		t.Fatalf("Failed to write response: %v", err)
+	}
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Errorf("Expected status 503, got %d", rec.Code)
-	}
-
-	body := rec.Body.String()
-	if body != "database not ready" {
-		t.Errorf("Expected body 'database not ready', got %s", body)
 	}
 }
 
@@ -267,7 +300,15 @@ func TestHandler_HealthCheck_ContentType(t *testing.T) {
 	req := httptest.NewRequest("GET", "/healthz", nil)
 	rec := httptest.NewRecorder()
 
-	handler.HealthCheck(rec, req)
+	request := api.HealthCheckRequestObject{}
+	response, err := handler.HealthCheck(req.Context(), request)
+	if err != nil {
+		t.Fatalf("HealthCheck failed: %v", err)
+	}
+
+	if err := response.VisitHealthCheckResponse(rec); err != nil {
+		t.Fatalf("Failed to write response: %v", err)
+	}
 
 	contentType := rec.Header().Get("Content-Type")
 	if contentType != "application/json" {
@@ -284,7 +325,15 @@ func TestHandler_HealthCheck_Uptime(t *testing.T) {
 	req := httptest.NewRequest("GET", "/healthz", nil)
 	rec := httptest.NewRecorder()
 
-	handler.HealthCheck(rec, req)
+	request := api.HealthCheckRequestObject{}
+	response, err := handler.HealthCheck(req.Context(), request)
+	if err != nil {
+		t.Fatalf("HealthCheck failed: %v", err)
+	}
+
+	if err := response.VisitHealthCheckResponse(rec); err != nil {
+		t.Fatalf("Failed to write response: %v", err)
+	}
 
 	var status api.HealthStatus
 	if err := json.Unmarshal(rec.Body.Bytes(), &status); err != nil {

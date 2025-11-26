@@ -2,8 +2,6 @@ package health
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
 	"sync"
 	"time"
 
@@ -48,8 +46,8 @@ func (h *Handler) IsReady() bool {
 }
 
 // HealthCheck implements the /healthz endpoint
-func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+func (h *Handler) HealthCheck(ctx context.Context, request api.HealthCheckRequestObject) (api.HealthCheckResponseObject, error) {
+	checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	status := api.HealthStatus{
@@ -70,7 +68,7 @@ func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 
 	// Check database
 	if h.db != nil {
-		dbHealth, err := h.db.Health(ctx)
+		dbHealth, err := h.db.Health(checkCtx)
 		componentStatus := struct {
 			Message        *string                          `json:"message,omitempty"`
 			ResponseTimeMs *float32                         `json:"response_time_ms,omitempty"`
@@ -99,46 +97,30 @@ func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	// Set overall status
 	if overallHealthy {
 		status.Status = api.HealthStatusStatusHealthy
+		return api.HealthCheck200JSONResponse(status), nil
 	} else {
 		status.Status = api.HealthStatusStatusUnhealthy
-	}
-
-	// Write response
-	statusCode := http.StatusOK
-	if status.Status == api.HealthStatusStatusUnhealthy {
-		statusCode = http.StatusServiceUnavailable
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-
-	if err := json.NewEncoder(w).Encode(status); err != nil {
-		h.logger.Error("failed to encode health status", "error", err)
+		return api.HealthCheck503JSONResponse(status), nil
 	}
 }
 
 // ReadinessCheck implements the /healthz/ready endpoint
-func (h *Handler) ReadinessCheck(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ReadinessCheck(ctx context.Context, request api.ReadinessCheckRequestObject) (api.ReadinessCheckResponseObject, error) {
 	if !h.IsReady() {
 		h.logger.Debug("readiness check failed: not ready")
-		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte("not ready"))
-		return
+		return api.ReadinessCheck503Response{}, nil
 	}
 
 	// Check if database is accessible
-	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	if err := h.db.Ping(ctx); err != nil {
+	if err := h.db.Ping(pingCtx); err != nil {
 		h.logger.Warn("readiness check failed: database ping failed", "error", err)
-		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte("database not ready"))
-		return
+		return api.ReadinessCheck503Response{}, nil
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("ready"))
+	return api.ReadinessCheck200Response{}, nil
 }
 
 // LivenessCheck implements the /healthz/live endpoint

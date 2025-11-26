@@ -86,8 +86,8 @@ func main() {
 	healthHandler := health.NewHandler(log, db, version)
 
 	// Health check routes (no authentication required)
-	r.Get("/healthz", healthHandler.HealthCheck)
-	r.Get("/healthz/ready", healthHandler.ReadinessCheck)
+	// r.Get("/healthz", healthHandler.HealthCheck)
+	// r.Get("/healthz/ready", healthHandler.ReadinessCheck)
 	// r.Get("/healthz/live", func(w http.ResponseWriter, r *http.Request) {
 	// 	// Adapter for OpenAPI handler signature
 	// 	resp, err := healthHandler.LivenessCheck(r.Context(), /* construct api.LivenessCheckRequestObject if needed */)
@@ -100,9 +100,7 @@ func main() {
 	// })
 
 	strictHandler := api.NewStrictHandler(healthHandler, nil)
-	r.Mount("/healthz/live", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		strictHandler.LivenessCheck(w, r)
-	}))
+	api.HandlerFromMux(strictHandler, nil)
 
 	// api.HandlerFromMux(livenessCheck, r)
 

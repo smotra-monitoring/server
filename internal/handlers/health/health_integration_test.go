@@ -17,9 +17,8 @@ import (
 
 func setupTestRouter(handler *Handler) *chi.Mux {
 	r := chi.NewRouter()
-	r.Get("/healthz", handler.HealthCheck)
-	r.Get("/healthz/ready", handler.ReadinessCheck)
-	r.Get("/healthz/live", handler.LivenessCheck)
+	strictHandler := api.NewStrictHandler(handler, nil)
+	api.HandlerFromMux(strictHandler, r)
 	return r
 }
 
