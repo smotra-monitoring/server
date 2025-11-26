@@ -100,9 +100,7 @@ func main() {
 	// })
 
 	strictHandler := api.NewStrictHandler(healthHandler, nil)
-	api.HandlerFromMux(strictHandler, nil)
-
-	// api.HandlerFromMux(livenessCheck, r)
+	api.HandlerFromMux(strictHandler, r)
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
