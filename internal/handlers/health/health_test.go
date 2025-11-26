@@ -218,15 +218,18 @@ func TestHandler_LivenessCheck(t *testing.T) {
 	req := httptest.NewRequest("GET", "/healthz/live", nil)
 	rec := httptest.NewRecorder()
 
-	handler.LivenessCheck(rec, req)
+	request := api.LivenessCheckRequestObject{}
+	response, err := handler.LivenessCheck(req.Context(), request)
+	if err != nil {
+		t.Fatalf("LivenessCheck failed: %v", err)
+	}
+
+	if err := response.VisitLivenessCheckResponse(rec); err != nil {
+		t.Fatalf("Failed to write response: %v", err)
+	}
 
 	if rec.Code != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", rec.Code)
-	}
-
-	body := rec.Body.String()
-	if body != "alive" {
-		t.Errorf("Expected body 'alive', got %s", body)
 	}
 }
 
@@ -240,7 +243,15 @@ func TestHandler_LivenessCheck_AlwaysSucceeds(t *testing.T) {
 	req := httptest.NewRequest("GET", "/healthz/live", nil)
 	rec := httptest.NewRecorder()
 
-	handler.LivenessCheck(rec, req)
+	request := api.LivenessCheckRequestObject{}
+	response, err := handler.LivenessCheck(req.Context(), request)
+	if err != nil {
+		t.Fatalf("LivenessCheck failed: %v", err)
+	}
+
+	if err := response.VisitLivenessCheckResponse(rec); err != nil {
+		t.Fatalf("Failed to write response: %v", err)
+	}
 
 	if rec.Code != http.StatusOK {
 		t.Errorf("Expected status 200 even with failing database, got %d", rec.Code)

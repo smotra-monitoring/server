@@ -142,8 +142,7 @@ func (h *Handler) ReadinessCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 // LivenessCheck implements the /healthz/live endpoint
-func (h *Handler) LivenessCheck(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) LivenessCheck(ctx context.Context, request api.LivenessCheckRequestObject) (api.LivenessCheckResponseObject, error) {
 	// Simple liveness check - if we can respond, we're alive
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("alive"))
+	return api.LivenessCheck200Response{}, nil
 }
