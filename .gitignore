@@ -1,5 +1,6 @@
 # ignore local openapi-spec
-/oapi-codegen/spec.yaml
+/api/spec.yaml
+/api/strict.yaml
 
 # Binaries for programs and plugins
 *.exe
