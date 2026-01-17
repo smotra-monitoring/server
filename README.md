@@ -252,6 +252,8 @@ server/
 │   ├── dev.json            # Development configuration (JSON format)
 │   └── prod.yaml           # Production configuration (PostgreSQL)
 ├── internal/
+│   ├── api/                # Generated API code (from OpenAPI spec)
+│   │   └── api.gen.go      # Generated with oapi-codegen
 │   ├── config/             # Configuration management
 │   │   ├── config.go       # Config loading and validation
 │   │   └── types.go        # Config types and defaults
@@ -261,24 +263,33 @@ server/
 │   │   ├── sqlite.go       # SQLite implementation
 │   │   └── types.go        # Database interfaces and types
 │   ├── handlers/           # HTTP handlers
-│   │   └── health/         # Health check handlers
-│   │       └── health.go   # Health, readiness, liveness checks
+│   │   ├── handlers.go     # Combined handler implementation
+│   │   ├── health/         # Health check handlers
+│   │   │   └── health.go   # Health, readiness, liveness checks
+│   │   └── metrics/        # Prometheus metrics handlers
+│   │       └── metrics.go  # Metrics endpoint implementation
 │   ├── logger/             # Structured logging
 │   │   └── logger.go       # Logger implementation using slog
-│   └── middleware/         # HTTP middleware
-│       └── middleware.go   # RequestID, Logger, Recovery, CORS
-├── pkg/
-│   └── api/                # Generated API code (from OpenAPI spec)
-│       └── api.gen.go      # Generated with oapi-codegen
-├── api/                    # OpenAPI specification
-│   ├── oapi-codegen.yaml   # oapi-codegen configuration
-│   └── spec.yaml           # OpenAPI 3.0 specification
+│   ├── middleware/         # HTTP middleware
+│   │   └── middleware.go   # RequestID, Logger, Recovery, CORS
+│   └── testutil/           # Testing utilities
+│       ├── config.go       # Test configuration helpers
+│       ├── database.go     # Test database helpers
+│       ├── logger.go       # Test logger helpers
+│       └── mock_database.go # Mock database implementation
+├── api/                    # OpenAPI configuration
+│   └── oapi-codegen.yaml   # oapi-codegen configuration
 ├── bin/                    # Compiled binaries (gitignored)
 ├── data/                   # Database files for SQLite (gitignored)
+├── examples/               # Example code
+│   └── config/             # Configuration examples
+├── script/                 # Build and deployment scripts
 ├── go.mod                  # Go module definition
 ├── go.sum                  # Go module checksums
 ├── Makefile               # Build automation
-└── README.md              # This file
+├── LICENSE                # License file
+├── README.md              # This file
+└── TESTING.md             # Testing documentation
 ```
 
 ## Current Features
@@ -289,6 +300,7 @@ server/
 - **Structured Logging**: slog-based logging with JSON/text formats
 - **Graceful Shutdown**: Proper handling of SIGTERM/SIGINT signals
 - **Health Checks**: `/healthz`, `/healthz/ready`, `/healthz/live` endpoints
+- **Metrics Endpoint**: `/metrics` endpoint exposing Prometheus-format metrics
 
 ### Middleware
 - **Request ID**: Automatic request ID generation and propagation
@@ -303,8 +315,9 @@ server/
 - **Connection Management**: Configurable connection pools and timeouts
 
 ### API
-- **OpenAPI 3.0**: API specification in `api/spec.yaml`
-- **Code Generation**: Server stubs generated with oapi-codegen
+- **OpenAPI 3.0**: API specification maintained in separate [smotra-monitoring/openapi](https://github.com/smotra-monitoring/openapi) repository
+- **Code Generation**: Server stubs generated with oapi-codegen from remote spec
+- **Strict Handlers**: Uses OpenAPI strict handler pattern for type safety
 - **Versioned APIs**: API v1 routes under `/api/v1/`
 
 ## Development
@@ -321,32 +334,56 @@ go install github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@latest
 
 ### Adding New Features
 
-1. Define API endpoints in `api/spec.yaml`
+1. Define API endpoints in the [smotra-monitoring/openapi](https://github.com/smotra-monitoring/openapi) repository
 2. Regenerate API code: `make generate-oapi`
-3. Implement handlers in `internal/handlers/`
-4. Register routes in `cmd/server/main.go`
-5. Add tests for your handlers
-6. Run `make all` to verify everything builds
+3. Implement handlers in `internal/handlers/` following the strict handler pattern
+4. Routes are automatically registered via `api.HandlerFromMux()` in `cmd/server/main.go`
+5. Add unit tests and integration tests for your handlers
+6. Update metrics collection if appropriate (see Metrics section in copilot-instructions.md)
+7. Run `make all` to verify everything builds
 
 ### Regenerating API Code
 
-After modifying `api/spec.yaml`:
+The OpenAPI specification is maintained in a separate repository. To regenerate API code:
 
 ```bash
 make generate-oapi
 ```
 
-This will regenerate `pkg/api/api.gen.go` with the updated API definitions.
+This will fetch the latest spec from the [smotra-monitoring/openapi](https://github.com/smotra-monitoring/openapi) repository and regenerate `internal/api/api.gen.go` with the updated API definitions.
+
+For generating only health-related endpoints:
+
+```bash
+make generate-oapi-health
+```
 
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run all tests (unit + integration)
 make test
+
+# Run unit tests only
+make test-unit
+
+# Run integration tests only
+make test-integration
 
 # Run tests with coverage
 make test-coverage
-# Opens coverage.html in your browser
+
+# Run unit tests with coverage
+make test-coverage-unit
+
+# Run integration tests with coverage
+make test-coverage-integration
+
+# Run tests with verbose output
+make test-verbose
+
+# Run tests in watch mode (requires gotestsum)
+make test-watch
 ```
 
 ### Code Formatting and Linting
@@ -435,6 +472,16 @@ go mod download
 
 ## Roadmap
 
+### Completed
+- [x] SQLite and PostgreSQL database support with interface abstraction
+- [x] Health check endpoints (health, ready, live)
+- [x] Prometheus metrics endpoint
+- [x] Structured logging with slog
+- [x] Configuration management (YAML/JSON)
+- [x] Middleware (logging, request ID, recovery, CORS)
+- [x] OpenAPI-based code generation
+- [x] Unit and integration testing infrastructure
+
 ### Short Term
 - [ ] Database migrations with go-migrate
 - [ ] JWT authentication implementation
@@ -447,7 +494,6 @@ go mod download
 - [ ] Metrics collection from agents
 - [ ] Alert configuration and notification system
 - [ ] Web dashboard (frontend)
-- [ ] Prometheus metrics endpoint
 - [ ] TimescaleDB integration for time-series data
 
 ### Long Term
@@ -463,6 +509,9 @@ go mod download
 - `GET /healthz` - Basic health check
 - `GET /healthz/ready` - Readiness check (includes database connectivity)
 - `GET /healthz/live` - Liveness check
+
+### Metrics
+- `GET /metrics` - Prometheus metrics endpoint exposing server and application metrics
 
 ### API v1
 - `GET /api/v1` - API version information
