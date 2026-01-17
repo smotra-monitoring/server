@@ -97,8 +97,9 @@ Database access must be implemented via interface abstractions to allow easy swa
 Server repository structure must follow standard Go project layout conventions, with clear separation of concerns between packages for handlers, services, models, and utilities.
 
 oapi-codegen is used to generate server stubs and models from OpenAPI specifications, ensuring consistency between API documentation and implementation. 
-- pkg/api contains the generated code.
+- internal/api contains the generated code.
 - cmd/server contains the main application entry point.
+- OpenAPI specification is maintained in a separate repository (smotra-monitoring/openapi) and fetched during code generation.
 
 The server must implement robust error handling and logging using a structured logging library slog. Configuration management should be handled via environment variables and configuration files, with support for different environments (development, staging, production).
 
@@ -168,4 +169,4 @@ output += "# TYPE smotra_myfeature_operations_total counter\n"
 output += fmt.Sprintf("smotra_myfeature_operations_total %d\n", h.myFeatureOperationsTotal.Load())
 ```
 
-(README.md)[/README.md] describing server setup and development process
+[README.md](/README.md) describing server setup and development process
