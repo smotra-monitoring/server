@@ -137,9 +137,6 @@ jobs:
         spell_check_this: check-spelling/spell-check-this@prerelease
         task: ${{ needs.spelling.outputs.followup }}
         experimental_apply_changes_via_bot: 1
-        extra_dictionary_limit: 20
-        extra_dictionaries:
-          cspell:golang/dict/go.txt
 
   update:
     name: Update PR
