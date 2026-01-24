@@ -74,6 +74,11 @@ generate-oapi: ## Generate code from OpenAPI spec
 	@oapi-codegen -config=api/oapi-codegen.yaml https://raw.githubusercontent.com/smotra-monitoring/openapi/refs/heads/master/api/spec.yaml
 	@echo "Code generation complete"
 
+generate-sqlc: ## Generate database code from SQL queries using sqlc
+	@echo "Generating database code from SQL queries..."
+	@cd data/dev/sqlc && sqlc generate
+	@echo "sqlc code generation complete"
+
 fmt: ## Format Go code
 	@echo "Formatting code..."
 	@go fmt ./...
@@ -92,6 +97,7 @@ tidy: ## Tidy Go modules
 install-tools: ## Install required tools
 	@echo "Installing tools..."
 	@go install github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@latest
+	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 	@echo "Tools installed"
 
 dev: ## Run in development mode with auto-reload (requires air)
@@ -112,4 +118,4 @@ docker-run: ## Run Docker container
 	@echo "Running Docker container..."
 	@docker run -p 8080:8080 --env-file .env smotra-server:$(VERSION)
 
-all: clean generate-oapi fmt lint test build ## Run all build steps
+all: clean generate-oapi generate-sqlc fmt lint test build ## Run all build steps

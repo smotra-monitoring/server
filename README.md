@@ -481,15 +481,14 @@ go mod download
 - [x] Middleware (logging, request ID, recovery, CORS)
 - [x] OpenAPI-based code generation
 - [x] Unit and integration testing infrastructure
+- [x] Update copilot-instructions.md about sqlc generations and file-structure
 
 ### Short Term
 - [ ] Correct OpenAPI spec. Endpoint.enabled is required
-- [ ] Refactor DB schema. All fields related to TIME must be of type TIMESTAMP
 - [ ] Correct DB schema. Add optional port to the Endpoint
 - [ ] Correct sqlc-generator according to the previous item.
 - [ ] Remove "above" lines in sqlc-generator agents.sql
 - [ ] Add GetTitle() to MetricsProvider interface and use it in metrics.buildPrometheusMetrics in output labels
-- [ ] Update copilot-instructions.md about sqlc generations and file-structure
 - [ ] Database migrations with go-migrate
 - [ ] JWT authentication implementation
 - [ ] User management endpoints
