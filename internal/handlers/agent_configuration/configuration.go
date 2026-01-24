@@ -164,3 +164,8 @@ func (h *Handler) GetMetrics() map[string]uint64 {
 		"get_configuration_failure": h.getConfigurationFailure.Load(),
 	}
 }
+
+// GetTitle returns the title for this metrics provider
+func (h *Handler) GetTitle() string {
+	return "agent_configuration"
+}

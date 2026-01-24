@@ -482,13 +482,12 @@ go mod download
 - [x] OpenAPI-based code generation
 - [x] Unit and integration testing infrastructure
 - [x] Update copilot-instructions.md about sqlc generations and file-structure
+- [X] Add GetTitle() to MetricsProvider interface and use it in metrics.buildPrometheusMetrics in output labels
 
 ### Short Term
-- [ ] Correct OpenAPI spec. Endpoint.enabled is required
+- [ ] Correct OpenAPI spec. Endpoint enabled is required
 - [ ] Correct DB schema. Add optional port to the Endpoint
 - [ ] Correct sqlc-generator according to the previous item.
-- [ ] Remove "above" lines in sqlc-generator agents.sql
-- [ ] Add GetTitle() to MetricsProvider interface and use it in metrics.buildPrometheusMetrics in output labels
 - [ ] Database migrations with go-migrate
 - [ ] JWT authentication implementation
 - [ ] User management endpoints
