@@ -94,6 +94,41 @@ Database access must be implemented via interface abstractions to allow easy swa
 - Development and testing can use SQLite for simplicity.
 - Database schema is managed using a migration tool go-migrate.
 
+## Database Access and Code Generation
+
+All database interactions must use sqlc-generated code. Direct SQL queries in application code are prohibited.
+
+### sqlc Configuration and Usage
+
+- **Code Generator**: sqlc is used to generate type-safe Go code from SQL queries.
+- **Configuration File**: Located at `./data/dev/sqlc/sqlc.yaml`
+- **Generated Package**: `internal/database/queries`
+- **Generation Command**: Use the Makefile action `make generate-sqlc` to run code generation.
+
+### Database Migration Files
+
+- **Location**: `data/` folder with environment-specific subfolders
+  - Development: `data/dev/migrations/`
+  - Production: `data/prod/` (when applicable)
+- **Format**: SQL migration files (e.g., `0001_schema.up.sql`)
+
+### Query File Organization
+
+- **Location**: `data/dev/migrations/` (alongside migration files) or separate query directory
+- **Organization**: Query files must be organized by database entity:
+  - `agents.sql` - All queries related to agents table
+  - `users.sql` - All queries related to users table
+  - `checks.sql` - All queries related to checks table
+  - etc.
+- **Best Practice**: Group related queries by the primary table/entity they operate on.
+
+### Development Workflow
+
+1. Create or modify SQL queries in the appropriate entity file (e.g., `agents.sql`)
+2. Run `make generate-sqlc` to regenerate Go code
+3. Import and use the generated code from `internal/database/queries`
+4. Never write raw SQL queries directly in Go code
+
 Server repository structure must follow standard Go project layout conventions, with clear separation of concerns between packages for handlers, services, models, and utilities.
 
 oapi-codegen is used to generate server stubs and models from OpenAPI specifications, ensuring consistency between API documentation and implementation. 
