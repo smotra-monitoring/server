@@ -30,7 +30,7 @@ The project includes a ready-to-use development configuration that uses SQLite:
 go run cmd/server/main.go -c configs/dev.yaml
 
 # Or use the Makefile
-make run
+just run
 ```
 
 The server will start on `http://localhost:8080`
@@ -209,7 +209,7 @@ auth:
 
 ```bash
 # Build the binary
-make build
+just build
 
 # Or manually
 go build -ldflags "-X main.version=1.0.0" -o bin/smotra-server cmd/server/main.go
@@ -218,26 +218,26 @@ go build -ldflags "-X main.version=1.0.0" -o bin/smotra-server cmd/server/main.g
 ./bin/smotra-server -c configs/prod.yaml
 ```
 
-## Available Make Targets
+## Available just Targets
 
 The project includes a comprehensive Makefile for common development tasks:
 
 ```bash
-make help              # Display all available targets
-make build             # Build the server binary
-make run               # Run the server in development mode
-make test              # Run tests
-make test-coverage     # Run tests with coverage report
-make clean             # Clean build artifacts
-make generate-oapi     # Generate code from OpenAPI spec
-make fmt               # Format Go code
-make lint              # Run linters (go vet)
-make tidy              # Tidy Go modules
-make install-tools     # Install required tools (oapi-codegen)
-make dev               # Run with auto-reload (requires air)
-make docker-build      # Build Docker image
-make docker-run        # Run Docker container
-make all               # Run all build steps (clean, generate, fmt, lint, test, build)
+just help              # Display all available targets
+just build             # Build the server binary
+just run               # Run the server in development mode
+just test              # Run tests
+just test-coverage     # Run tests with coverage report
+just clean             # Clean build artifacts
+just generate-oapi     # Generate code from OpenAPI spec
+just fmt               # Format Go code
+just lint              # Run linters (go vet)
+just tidy              # Tidy Go modules
+just install-tools     # Install required tools (oapi-codegen)
+just dev               # Run with auto-reload (requires air)
+just docker-build      # Build Docker image
+just docker-run        # Run Docker container
+just all               # Run all build steps (clean, generate, fmt, lint, test, build)
 ```
 
 ## Project Structure
@@ -326,7 +326,7 @@ server/
 
 ```bash
 # Install oapi-codegen for API code generation
-make install-tools
+just install-tools
 
 # Or manually
 go install github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@latest
@@ -335,19 +335,19 @@ go install github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@latest
 ### Adding New Features
 
 1. Define API endpoints in the [smotra-monitoring/openapi](https://github.com/smotra-monitoring/openapi) repository
-2. Regenerate API code: `make generate-oapi`
+2. Regenerate API code: `just generate-oapi`
 3. Implement handlers in `internal/handlers/` following the strict handler pattern
 4. Routes are automatically registered via `api.HandlerFromMux()` in `cmd/server/main.go`
 5. Add unit tests and integration tests for your handlers
 6. Update metrics collection if appropriate (see Metrics section in copilot-instructions.md)
-7. Run `make all` to verify everything builds
+7. Run `just all` to verify everything builds
 
 ### Regenerating API Code
 
 The OpenAPI specification is maintained in a separate repository. To regenerate API code:
 
 ```bash
-make generate-oapi
+just generate-oapi
 ```
 
 This will fetch the latest spec from the [smotra-monitoring/openapi](https://github.com/smotra-monitoring/openapi) repository and regenerate `internal/api/api.gen.go` with the updated API definitions.
@@ -355,48 +355,48 @@ This will fetch the latest spec from the [smotra-monitoring/openapi](https://git
 For generating only health-related endpoints:
 
 ```bash
-make generate-oapi-health
+just generate-oapi-health
 ```
 
 ### Running Tests
 
 ```bash
 # Run all tests (unit + integration)
-make test
+just test
 
 # Run unit tests only
-make test-unit
+just test-unit
 
 # Run integration tests only
-make test-integration
+just test-integration
 
 # Run tests with coverage
-make test-coverage
+just test-coverage
 
 # Run unit tests with coverage
-make test-coverage-unit
+just test-coverage-unit
 
 # Run integration tests with coverage
-make test-coverage-integration
+just test-coverage-integration
 
 # Run tests with verbose output
-make test-verbose
+just test-verbose
 
 # Run tests in watch mode (requires gotestsum)
-make test-watch
+just test-watch
 ```
 
 ### Code Formatting and Linting
 
 ```bash
 # Format code
-make fmt
+just fmt
 
 # Run linter
-make lint
+just lint
 
 # Tidy dependencies
-make tidy
+just tidy
 ```
 
 ### Development Mode with Auto-Reload
@@ -406,7 +406,7 @@ make tidy
 go install github.com/cosmtrek/air@latest
 
 # Run with auto-reload
-make dev
+just dev
 ```
 
 ## Troubleshooting
@@ -451,11 +451,11 @@ go run cmd/server/main.go -c configs/dev.yaml
 
 ```bash
 # Clean and rebuild
-make clean
-make build
+just clean
+just build
 
 # Update dependencies
-make tidy
+just tidy
 go mod download
 ```
 
@@ -535,15 +535,15 @@ Contributions are welcome! Please follow these guidelines:
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Run tests and linting (`make all`)
+4. Run tests and linting (`just all`)
 5. Commit your changes (`git commit -m 'Add amazing feature'`)
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
 
 ### Code Style
 - Follow standard Go conventions and idioms
-- Run `make fmt` before committing
-- Ensure `make lint` passes
+- Run `just fmt` before committing
+- Ensure `just lint` passes
 - Add tests for new functionality
 - Update documentation as needed
 
