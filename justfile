@@ -84,7 +84,7 @@ clean:
 # Generate code from OpenAPI spec
 generate-oapi:
     @echo "Generating API code from OpenAPI spec..."
-    oapi-codegen -config=api/oapi-codegen.yaml https://raw.githubusercontent.com/smotra-monitoring/openapi/refs/heads/master/api/spec.yaml
+    oapi-codegen -config=api/oapi-codegen.yaml api/openapi/api/spec.yaml
     @echo "Code generation complete"
 
 # Generate database code from SQL queries using sqlc
@@ -114,7 +114,7 @@ tidy:
 # Install required tools
 install-tools:
     @echo "Installing tools..."
-    go install github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@latest
+    go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
     go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
     @echo "Tools installed"
 
