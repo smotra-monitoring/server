@@ -115,16 +115,12 @@ func (h *Handler) GetAgentConfiguration(ctx context.Context, request api.GetAgen
 		}
 
 		// Convert enabled from sql.NullInt64 to *bool
-		var enabledPtr *bool
-		if endpointRow.Enabled.Valid {
-			enabled := endpointRow.Enabled.Int64 != 0
-			enabledPtr = &enabled
-		}
+		enabled := endpointRow.Enabled.Int64 != 0
 
 		endpoint := api.Endpoint{
 			Id:      endpointUUID,
 			Address: endpointRow.Address,
-			Enabled: enabledPtr,
+			Enabled: enabled,
 			Tags:    endpointTagsPtr,
 		}
 		endpoints = append(endpoints, endpoint)
