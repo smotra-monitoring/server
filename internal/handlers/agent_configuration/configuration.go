@@ -115,7 +115,7 @@ func (h *Handler) GetAgentConfiguration(ctx context.Context, request api.GetAgen
 		}
 
 		// Convert enabled from sql.NullInt64 to *bool
-		enabled := endpointRow.Enabled.Int64 != 0
+		enabled := endpointRow.Enabled != 0
 
 		endpoint := api.Endpoint{
 			Id:      endpointUUID,
