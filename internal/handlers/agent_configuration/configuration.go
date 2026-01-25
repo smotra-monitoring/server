@@ -83,6 +83,12 @@ func (h *Handler) GetAgentConfiguration(ctx context.Context, request api.GetAgen
 		return nil, fmt.Errorf("failed to get agent tags: %w", err)
 	}
 
+	// Convert agent tags to pointer (nil if empty)
+	var agentTagsPtr *[]string
+	if len(agentTags) > 0 {
+		agentTagsPtr = &agentTags
+	}
+
 	// Get agent endpoints
 	endpointRows, err := q.GetAgentEndpoints(ctx, agentID)
 	if err != nil {
@@ -139,7 +145,7 @@ func (h *Handler) GetAgentConfiguration(ctx context.Context, request api.GetAgen
 		Version:    int32(configRow.Version),
 		AgentId:    agentUUID,
 		AgentName:  configRow.Name,
-		Tags:       agentTags,
+		Tags:       agentTagsPtr,
 		Monitoring: baseConfig.Monitoring,
 		Server:     baseConfig.Server,
 		Storage:    baseConfig.Storage,
