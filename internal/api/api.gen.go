@@ -61,7 +61,7 @@ type AgentConfig struct {
 type Endpoint struct {
 	// Address IP address, hostname, or URL
 	Address string `json:"address"`
-	Enabled *bool  `json:"enabled,omitempty"`
+	Enabled bool   `json:"enabled"`
 
 	// Id UUID version 7 as per RFC 4122
 	Id   UUIDv7 `json:"id"`
