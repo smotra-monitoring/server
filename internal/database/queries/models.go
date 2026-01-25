@@ -16,8 +16,8 @@ type Agent struct {
 	BaseConfig string
 	Version    int64
 	LastSeenAt sql.NullString
-	UpdatedAt  sql.NullString
-	CreatedAt  sql.NullString
+	UpdatedAt  string
+	CreatedAt  string
 }
 
 type AgentTag struct {
@@ -29,9 +29,9 @@ type Endpoint struct {
 	ID        string
 	AgentID   string
 	Address   string
-	Enabled   sql.NullInt64
-	UpdatedAt sql.NullString
-	CreatedAt sql.NullString
+	Enabled   int64
+	UpdatedAt string
+	CreatedAt string
 }
 
 type EndpointTag struct {
@@ -49,11 +49,11 @@ type Tag struct {
 	ID        string
 	SectionID string
 	Name      string
-	Scope     sql.NullString
+	Scope     string
 }
 
 type Tenant struct {
 	ID        string
 	Name      string
-	CreatedAt sql.NullString
+	CreatedAt string
 }

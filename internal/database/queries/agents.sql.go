@@ -7,7 +7,6 @@ package queries
 
 import (
 	"context"
-	"database/sql"
 )
 
 const createAgent = `-- name: CreateAgent :one
@@ -68,7 +67,7 @@ SELECT id, address, enabled FROM endpoints WHERE agent_id = ?
 type GetAgentEndpointsRow struct {
 	ID      string
 	Address string
-	Enabled sql.NullInt64
+	Enabled int64
 }
 
 func (q *Queries) GetAgentEndpoints(ctx context.Context, agentID string) ([]GetAgentEndpointsRow, error) {
