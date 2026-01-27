@@ -158,7 +158,12 @@ func TestRecovery_NoPanic(t *testing.T) {
 }
 
 func TestRequestID_GeneratesID(t *testing.T) {
-	handler := RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	log := logger.New(logger.Config{
+		Level:  "error",
+		Format: "json",
+		Output: nil,
+	})
+	handler := RequestID(log)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestID := w.Header().Get("X-Request-ID")
 		if requestID == "" {
 			t.Error("Expected X-Request-ID header to be set")
@@ -180,7 +185,12 @@ func TestRequestID_GeneratesID(t *testing.T) {
 func TestRequestID_PreservesExistingID(t *testing.T) {
 	existingID := "existing-request-id"
 
-	handler := RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	log := logger.New(logger.Config{
+		Level:  "error",
+		Format: "json",
+		Output: nil,
+	})
+	handler := RequestID(log)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestID := w.Header().Get("X-Request-ID")
 		if requestID != existingID {
 			t.Errorf("Expected X-Request-ID %s, got %s", existingID, requestID)
@@ -302,7 +312,7 @@ func TestMiddleware_ChainedExecution(t *testing.T) {
 	})
 
 	// Chain all middleware
-	handler := RequestID(Recovery(log)(Logger(log)(CORS(finalHandler))))
+	handler := RequestID(log)(Recovery(log)(Logger(log)(CORS(finalHandler))))
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	rec := httptest.NewRecorder()
@@ -344,7 +354,7 @@ func TestMiddleware_ChainedWithPanic(t *testing.T) {
 	})
 
 	// Chain all middleware
-	handler := RequestID(Recovery(log)(Logger(log)(CORS(panicHandler))))
+	handler := RequestID(log)(Recovery(log)(Logger(log)(CORS(panicHandler))))
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	rec := httptest.NewRecorder()

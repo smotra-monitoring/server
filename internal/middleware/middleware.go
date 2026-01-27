@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/smotra-monitoring/server/internal/logger"
 )
 
@@ -78,16 +79,24 @@ func Recovery(log *logger.Logger) func(next http.Handler) http.Handler {
 }
 
 // RequestID returns a middleware that adds a request ID to the context
-func RequestID(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestID := r.Header.Get("X-Request-ID")
-		if requestID == "" {
-			// Generate a simple request ID (in production, use UUID)
-			requestID = time.Now().Format("20060102150405.000000")
-		}
-		w.Header().Set("X-Request-ID", requestID)
-		next.ServeHTTP(w, r)
-	})
+func RequestID(log *logger.Logger) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestID := r.Header.Get("X-Request-ID")
+			if requestID == "" {
+				// Generate a simple request ID (in production, use UUID)
+				rID, err := uuid.NewV7()
+				if err == nil {
+					requestID = rID.String()
+				} else {
+					log.Error("Failed to generate UUIDv7 for request ID", "error", err)
+					requestID = uuid.NewString()
+				}
+			}
+			w.Header().Set("X-Request-ID", requestID)
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 // CORS returns a middleware that handles CORS
