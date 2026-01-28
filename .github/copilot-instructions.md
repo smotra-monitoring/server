@@ -220,4 +220,5 @@ output += fmt.Sprintf("smotra_myfeature_operations_total %d\n", h.myFeatureOpera
 ```
 
 README.md in the project root describes server setup and development process
-
+TESTING.md describes the testing strategy and how to run tests.
+ROADMAP.md outlines planned features and improvements for future releases.

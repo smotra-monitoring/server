@@ -92,25 +92,25 @@ The project Makefile includes convenient commands for running tests:
 
 ```bash
 # Run all tests
-make test
+just test
 
 # Run unit tests only
-make test-unit
+just test-unit
 
 # Run integration tests only
-make test-integration
+just test-integration
 
 # Run tests with coverage report
-make test-coverage
+just test-coverage
 
 # Run unit tests with coverage
-make test-coverage-unit
+just test-coverage-unit
 
 # Run integration tests with coverage
-make test-coverage-integration
+just test-coverage-integration
 
 # Run tests with verbose output
-make test-verbose
+just test-verbose
 ```
 
 ## Test Organization
