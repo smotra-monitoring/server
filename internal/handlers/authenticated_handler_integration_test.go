@@ -110,9 +110,9 @@ func TestAuthenticatedHandler_Integration(t *testing.T) {
 			t.Fatalf("Expected no error, got %v", err)
 		}
 
-		respTyped, ok := resp.(api.GetAgentConfiguration404JSONResponse)
+		respTyped, ok := resp.(api.GetAgentConfiguration401JSONResponse)
 		if !ok {
-			t.Errorf("Expected GetAgentConfiguration404JSONResponse, got %T", resp)
+			t.Errorf("Expected GetAgentConfiguration401JSONResponse, got %T", resp)
 		}
 
 		if respTyped.Error != "unauthorized" {
@@ -125,8 +125,8 @@ func TestAuthenticatedHandler_Integration(t *testing.T) {
 		agentUUID, _ := uuid.Parse(agentID)
 
 		authInfo := &middleware.AuthInfo{
-			AgentID:      agentID,
-			AuthType:     "agent_api_key",
+			AgentID:       agentID,
+			AuthType:      "agent_api_key",
 			Authenticated: true,
 		}
 		ctx := context.WithValue(context.Background(), middleware.AuthContextKey, authInfo)
@@ -151,8 +151,8 @@ func TestAuthenticatedHandler_Integration(t *testing.T) {
 
 		// Authenticate as a different agent
 		authInfo := &middleware.AuthInfo{
-			AgentID:      "different-agent-id",
-			AuthType:     "agent_api_key",
+			AgentID:       "different-agent-id",
+			AuthType:      "agent_api_key",
 			Authenticated: true,
 		}
 		ctx := context.WithValue(context.Background(), middleware.AuthContextKey, authInfo)
@@ -165,9 +165,9 @@ func TestAuthenticatedHandler_Integration(t *testing.T) {
 			t.Fatalf("Expected no error, got %v", err)
 		}
 
-		respTyped, ok := resp.(api.GetAgentConfiguration404JSONResponse)
+		respTyped, ok := resp.(api.GetAgentConfiguration503JSONResponse)
 		if !ok {
-			t.Errorf("Expected GetAgentConfiguration404JSONResponse, got %T", resp)
+			t.Errorf("Expected GetAgentConfiguration503JSONResponse, got %T", resp)
 		}
 
 		if respTyped.Error != "forbidden" {
