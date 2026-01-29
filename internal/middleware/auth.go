@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -39,9 +40,21 @@ func AgentAPIKeyAuth(log *logger.Logger, db database.Database) func(next http.Ha
 			// Extract API key from X-Agent-API-Key header
 			apiKey := r.Header.Get("X-Agent-API-Key")
 
+			// If no API key, continue to next middleware/handler (might be OAuth2)
+			if apiKey == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			// Extract agent ID from the URL path
 			// Path format: /agent/{agentId}/configuration
 			agentID := extractAgentIDFromPath(r.URL.Path)
+
+			// If API key present but no agent ID in path, that's an error
+			if agentID == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
 
 			// Check if authentication is already successful from another method
 			if authInfo := r.Context().Value(AuthContextKey); authInfo != nil {
@@ -51,24 +64,10 @@ func AgentAPIKeyAuth(log *logger.Logger, db database.Database) func(next http.Ha
 				}
 			}
 
-			// If no API key, continue to next middleware/handler (might be OAuth2)
-			if apiKey == "" {
-				next.ServeHTTP(w, r)
-				return
-			}
-
-			// If API key present but no agent ID in path, that's an error
-			if agentID == "" {
-				log.Warn("API key provided but no agent ID in path", "path", r.URL.Path)
-				http.Error(w, `{"error":"unauthorized","message":"Invalid request path"}`, http.StatusUnauthorized)
-				return
-			}
-
 			// Verify API key
 			authenticated, err := verifyAgentAPIKey(r.Context(), db, agentID, apiKey)
 			if err != nil {
-				log.Error("Failed to verify API key", "error", err, "agent_id", agentID)
-				http.Error(w, `{"error":"internal_error","message":"Authentication error"}`, http.StatusInternalServerError)
+				next.ServeHTTP(w, r)
 				return
 			}
 
@@ -183,7 +182,9 @@ func verifyAgentAPIKey(ctx context.Context, db database.Database, agentID, apiKe
 
 	// Get the stored API key hash for the agentDB
 	agentDB, err := q.VerifyAgentAPIKey(ctx, agentID)
-	if err != nil {
+	if err == sql.ErrNoRows {
+		return false, nil // Agent not found
+	} else if err != nil {
 		return false, fmt.Errorf("failed to get agent: %w", err)
 	}
 

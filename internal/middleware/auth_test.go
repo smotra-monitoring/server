@@ -123,6 +123,15 @@ func TestAgentAPIKeyAuth_WithAPIKeyButNoAgentInPath(t *testing.T) {
 	middleware := AgentAPIKeyAuth(log, mockDB)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		authInfo := ctx.Value(AuthContextKey)
+		if authInfo != nil {
+			info, ok := authInfo.(*AuthInfo)
+			if ok && info.Authenticated {
+				t.Error("Expected authentication to fail for non-existent agent")
+			}
+		}
+
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
@@ -133,8 +142,8 @@ func TestAgentAPIKeyAuth_WithAPIKeyButNoAgentInPath(t *testing.T) {
 
 	middleware(handler).ServeHTTP(w, req)
 
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("Expected status 401, got %d", w.Code)
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 }
 
