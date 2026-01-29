@@ -21,8 +21,6 @@
 - [x] justfile for build automation (replacing Makefile)
 
 ### Bugfixes that are part of a current PR
-- [ ] Is it possible to replace in handlers.authenticated_handler.GetAgentConfiguration function body to call of the middleware.RequiredAuth ?
-
 - [ ] middleware/auth.go AgentAPIKeyAuth should NOT return HTTP Unauthorized (line 63) or HTTP InternalServerError (line 71). This change will fail some tests, but logic must be correct.
 
 - [ ] Return back to auth.RequireAuth and review api.Error return blocks
