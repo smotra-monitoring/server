@@ -101,12 +101,6 @@ func main() {
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(`{"message":"Smotra Monitoring API v1","version":"` + version + `"}`))
 		})
-
-		// // Sub-router for agent endpoints with authentication middleware
-		// r.Route("/agents", func(r chi.Router) {
-		// 	r.Use(middleware.Authentication) // Assuming you have an authentication middleware
-		// 	// Define agent-related streict API handlers here
-		// 	r.Post("/", agentHandler.RegisterAgent)
 	})
 
 	// Create HTTP server
