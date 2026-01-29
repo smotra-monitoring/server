@@ -173,6 +173,9 @@ type InternalServerError = Error
 // NotFound defines model for NotFound.
 type NotFound = Error
 
+// NotImplemented defines model for NotImplemented.
+type NotImplemented = Error
+
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = Error
 
@@ -480,6 +483,8 @@ type InternalServerErrorJSONResponse Error
 
 type NotFoundJSONResponse Error
 
+type NotImplementedJSONResponse Error
+
 type UnauthorizedJSONResponse Error
 
 type GetAgentConfigurationRequestObject struct {
@@ -514,6 +519,15 @@ type GetAgentConfiguration404JSONResponse struct{ NotFoundJSONResponse }
 func (response GetAgentConfiguration404JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetAgentConfiguration501JSONResponse struct{ NotImplementedJSONResponse }
+
+func (response GetAgentConfiguration501JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(501)
 
 	return json.NewEncoder(w).Encode(response)
 }
