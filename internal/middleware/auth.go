@@ -6,7 +6,6 @@ import (
 	"crypto/subtle"
 	"database/sql"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -107,19 +106,13 @@ func OAuth2Auth(log *logger.Logger) func(next http.Handler) http.Handler {
 			// Check if it's a Bearer token
 			if strings.HasPrefix(authHeader, "Bearer ") {
 				log.Warn("OAuth2 authentication attempted but not implemented")
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusNotImplemented)
 
-				// Put together error struct to send back
-				requestID, err := uuid.Parse(r.Header.Get("X-Request-ID"))
-				if err != nil {
-					log.Error("Failed to parse X-Request-ID to UUID", "error", err)
-				}
-				json.NewEncoder(w).Encode(api.Error{
-					Error:     "not_implemented",
-					Message:   "OAuth2 authentication is not yet implemented",
-					RequestId: &requestID,
-				})
+				response := api.GetAgentConfiguration501JSONResponse{}
+				response.Error = "not_implemented"
+				response.Message = "OAuth2 authentication is not yet implemented"
+				response.RequestId = getRequestIDFromHeader(r, log)
+
+				response.VisitGetAgentConfigurationResponse(w)
 				return
 			}
 
