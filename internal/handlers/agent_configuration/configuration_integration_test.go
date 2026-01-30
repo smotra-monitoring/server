@@ -38,6 +38,21 @@ func (t *testServerImpl) PrometheusMetrics(ctx context.Context, request api.Prom
 	return api.PrometheusMetrics200TextResponse(""), nil
 }
 
+// RegisterAgentSelf delegates to agent register handler
+func (t *testServerImpl) RegisterAgentSelf(ctx context.Context, request api.RegisterAgentSelfRequestObject) (api.RegisterAgentSelfResponseObject, error) {
+	return nil, nil
+}
+
+// GetAgentClaimStatus delegates to agent claim status handler
+func (t *testServerImpl) GetAgentClaimStatus(ctx context.Context, request api.GetAgentClaimStatusRequestObject) (api.GetAgentClaimStatusResponseObject, error) {
+	return nil, nil
+}
+
+// ClaimAgent delegates to agent claim handler
+func (t *testServerImpl) ClaimAgent(ctx context.Context, request api.ClaimAgentRequestObject) (api.ClaimAgentResponseObject, error) {
+	return nil, nil
+}
+
 func setupTestRouter(handler *Handler) *chi.Mux {
 	testImpl := &testServerImpl{Handler: handler}
 	r := chi.NewRouter()
