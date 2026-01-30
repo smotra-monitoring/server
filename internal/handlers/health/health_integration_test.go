@@ -26,6 +26,16 @@ func (t *testServerImpl) PrometheusMetrics(ctx context.Context, request api.Prom
 	return api.PrometheusMetrics200TextResponse(""), nil
 }
 
+func (t *testServerImpl) GetAgentConfiguration(ctx context.Context, request api.GetAgentConfigurationRequestObject) (api.GetAgentConfigurationResponseObject, error) {
+	// Stub implementation for testing - not used in health tests
+	return api.GetAgentConfiguration404JSONResponse{
+		NotFoundJSONResponse: api.NotFoundJSONResponse{
+			Error:   "not_found",
+			Message: "Stub - not implemented",
+		},
+	}, nil
+}
+
 func setupTestRouter(handler *Handler) *chi.Mux {
 	testImpl := &testServerImpl{Handler: handler}
 	r := chi.NewRouter()

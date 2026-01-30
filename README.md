@@ -29,8 +29,8 @@ The project includes a ready-to-use development configuration that uses SQLite:
 # Run with the provided dev config
 go run cmd/server/main.go -c configs/dev.yaml
 
-# Or use the Makefile
-make run
+# Or use justfile
+just run
 ```
 
 The server will start on `http://localhost:8080`
@@ -209,7 +209,7 @@ auth:
 
 ```bash
 # Build the binary
-make build
+just build
 
 # Or manually
 go build -ldflags "-X main.version=1.0.0" -o bin/smotra-server cmd/server/main.go
@@ -218,26 +218,26 @@ go build -ldflags "-X main.version=1.0.0" -o bin/smotra-server cmd/server/main.g
 ./bin/smotra-server -c configs/prod.yaml
 ```
 
-## Available Make Targets
+## Available just Targets
 
-The project includes a comprehensive Makefile for common development tasks:
+The project includes a comprehensive justfile for common development tasks:
 
 ```bash
-make help              # Display all available targets
-make build             # Build the server binary
-make run               # Run the server in development mode
-make test              # Run tests
-make test-coverage     # Run tests with coverage report
-make clean             # Clean build artifacts
-make generate-oapi     # Generate code from OpenAPI spec
-make fmt               # Format Go code
-make lint              # Run linters (go vet)
-make tidy              # Tidy Go modules
-make install-tools     # Install required tools (oapi-codegen)
-make dev               # Run with auto-reload (requires air)
-make docker-build      # Build Docker image
-make docker-run        # Run Docker container
-make all               # Run all build steps (clean, generate, fmt, lint, test, build)
+just help              # Display all available targets
+just build             # Build the server binary
+just run               # Run the server in development mode
+just test              # Run tests
+just test-coverage     # Run tests with coverage report
+just clean             # Clean build artifacts
+just generate-oapi     # Generate code from OpenAPI spec
+just fmt               # Format Go code
+just lint              # Run linters (go vet)
+just tidy              # Tidy Go modules
+just install-tools     # Install required tools (oapi-codegen)
+just dev               # Run with auto-reload (requires air)
+just docker-build      # Build Docker image
+just docker-run        # Run Docker container
+just all               # Run all build steps (clean, generate, fmt, lint, test, build)
 ```
 
 ## Project Structure
@@ -261,9 +261,17 @@ server/
 │   │   ├── factory.go      # Database factory pattern
 │   │   ├── postgres.go     # PostgreSQL implementation
 │   │   ├── sqlite.go       # SQLite implementation
-│   │   └── types.go        # Database interfaces and types
+│   │   ├── types.go        # Database interfaces and types
+│   │   └── queries/        # sqlc-generated database queries
+│   │       ├── agents.sql      # Agent-related SQL queries
+│   │       ├── agents.sql.go   # Generated Go code for agent queries
+│   │       ├── db.go           # Database interface
+│   │       └── models.go       # Generated database models
 │   ├── handlers/           # HTTP handlers
 │   │   ├── handlers.go     # Combined handler implementation
+│   │   ├── authenticated_handler.go # Authenticated wrapper for protected endpoints
+│   │   ├── agent_configuration/ # Agent configuration handlers
+│   │   │   └── configuration.go # GET /agent/{agentId}/configuration
 │   │   ├── health/         # Health check handlers
 │   │   │   └── health.go   # Health, readiness, liveness checks
 │   │   └── metrics/        # Prometheus metrics handlers
@@ -271,7 +279,8 @@ server/
 │   ├── logger/             # Structured logging
 │   │   └── logger.go       # Logger implementation using slog
 │   ├── middleware/         # HTTP middleware
-│   │   └── middleware.go   # RequestID, Logger, Recovery, CORS
+│   │   ├── middleware.go   # RequestID, Logger, Recovery, CORS
+│   │   └── auth.go         # Agent API key authentication
 │   └── testutil/           # Testing utilities
 │       ├── config.go       # Test configuration helpers
 │       ├── database.go     # Test database helpers
@@ -286,7 +295,7 @@ server/
 ├── script/                 # Build and deployment scripts
 ├── go.mod                  # Go module definition
 ├── go.sum                  # Go module checksums
-├── Makefile               # Build automation
+├── justfile               # Build automation (just command runner)
 ├── LICENSE                # License file
 ├── README.md              # This file
 └── TESTING.md             # Testing documentation
@@ -301,53 +310,76 @@ server/
 - **Graceful Shutdown**: Proper handling of SIGTERM/SIGINT signals
 - **Health Checks**: `/healthz`, `/healthz/ready`, `/healthz/live` endpoints
 - **Metrics Endpoint**: `/metrics` endpoint exposing Prometheus-format metrics
+- **Authentication**: Agent API key authentication for protected endpoints
 
 ### Middleware
 - **Request ID**: Automatic request ID generation and propagation
 - **Logger**: Request/response logging with timing and status codes
 - **Recovery**: Panic recovery with proper error handling
 - **CORS**: Configurable CORS headers for API access
+- **Authentication**: Agent API key authentication middleware for securing endpoints
 
 ### Database Support
 - **SQLite**: For development and small deployments
 - **PostgreSQL**: For production deployments with connection pooling
 - **Interface-based**: Easy to swap database backends
 - **Connection Management**: Configurable connection pools and timeouts
+- **sqlc Code Generation**: Type-safe database queries generated from SQL
+- **Multi-Tenant Schema**: Hierarchical structure with tenants, sections, agents, and endpoints
+- **UUIDv7 Keys**: Time-ordered UUIDs for efficient indexing
 
 ### API
 - **OpenAPI 3.0**: API specification maintained in separate [smotra-monitoring/openapi](https://github.com/smotra-monitoring/openapi) repository
 - **Code Generation**: Server stubs generated with oapi-codegen from remote spec
 - **Strict Handlers**: Uses OpenAPI strict handler pattern for type safety
 - **Versioned APIs**: API v1 routes under `/api/v1/`
+- **Authentication**: Agent API key authentication via `X-Agent-API-Key` header
+
+### Agent Configuration
+- **Configuration Endpoint**: GET `/agent/{agentId}/configuration` to retrieve agent-specific configuration
+- **Database-Backed**: Configuration stored in database with version tracking
+- **sqlc Integration**: Type-safe database queries generated from SQL
+- **Tags Support**: Agent-level and endpoint-level tags with scoping (agent, endpoint, global)
+- **JSON Configuration**: Base configuration stored as JSON blob for flexibility
+- **Authenticated Access**: Requires valid agent API key via `X-Agent-API-Key` header
+- **Multi-Tenant Support**: Hierarchical structure with tenants, sections, and agents
 
 ## Development
 
 ### Prerequisites for Development
 
 ```bash
-# Install oapi-codegen for API code generation
-make install-tools
+# Install required development tools (oapi-codegen and sqlc)
+just install-tools
 
 # Or manually
-go install github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@latest
+go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+
+# Install just (if not already installed)
+# On macOS:
+brew install just
+# On Linux:
+cargo install just
+# Or download from: https://github.com/casey/just/releases
 ```
 
 ### Adding New Features
 
 1. Define API endpoints in the [smotra-monitoring/openapi](https://github.com/smotra-monitoring/openapi) repository
-2. Regenerate API code: `make generate-oapi`
+2. Regenerate API code: `just generate-oapi`
 3. Implement handlers in `internal/handlers/` following the strict handler pattern
 4. Routes are automatically registered via `api.HandlerFromMux()` in `cmd/server/main.go`
 5. Add unit tests and integration tests for your handlers
 6. Update metrics collection if appropriate (see Metrics section in copilot-instructions.md)
-7. Run `make all` to verify everything builds
+7. Run `just all` to verify everything builds
 
 ### Regenerating API Code
 
 The OpenAPI specification is maintained in a separate repository. To regenerate API code:
 
 ```bash
-make generate-oapi
+just generate-oapi
 ```
 
 This will fetch the latest spec from the [smotra-monitoring/openapi](https://github.com/smotra-monitoring/openapi) repository and regenerate `internal/api/api.gen.go` with the updated API definitions.
@@ -355,48 +387,48 @@ This will fetch the latest spec from the [smotra-monitoring/openapi](https://git
 For generating only health-related endpoints:
 
 ```bash
-make generate-oapi-health
+just generate-oapi-health
 ```
 
 ### Running Tests
 
 ```bash
 # Run all tests (unit + integration)
-make test
+just test
 
 # Run unit tests only
-make test-unit
+just test-unit
 
 # Run integration tests only
-make test-integration
+just test-integration
 
 # Run tests with coverage
-make test-coverage
+just test-coverage
 
 # Run unit tests with coverage
-make test-coverage-unit
+just test-coverage-unit
 
 # Run integration tests with coverage
-make test-coverage-integration
+just test-coverage-integration
 
 # Run tests with verbose output
-make test-verbose
+just test-verbose
 
 # Run tests in watch mode (requires gotestsum)
-make test-watch
+just test-watch
 ```
 
 ### Code Formatting and Linting
 
 ```bash
 # Format code
-make fmt
+just fmt
 
 # Run linter
-make lint
+just lint
 
 # Tidy dependencies
-make tidy
+just tidy
 ```
 
 ### Development Mode with Auto-Reload
@@ -406,7 +438,7 @@ make tidy
 go install github.com/cosmtrek/air@latest
 
 # Run with auto-reload
-make dev
+just dev
 ```
 
 ## Troubleshooting
@@ -451,11 +483,11 @@ go run cmd/server/main.go -c configs/dev.yaml
 
 ```bash
 # Clean and rebuild
-make clean
-make build
+just clean
+just build
 
 # Update dependencies
-make tidy
+just tidy
 go mod download
 ```
 
@@ -467,41 +499,10 @@ go mod download
 - **Database Drivers**: 
   - SQLite: mattn/go-sqlite3
   - PostgreSQL: lib/pq
+- **Database Query Generation**: sqlc (type-safe SQL to Go code generator)
 - **API Code Generation**: oapi-codegen
 - **Configuration**: YAML/JSON support via gopkg.in/yaml.v3
-
-## Roadmap
-
-### Completed
-- [x] SQLite and PostgreSQL database support with interface abstraction
-- [x] Health check endpoints (health, ready, live)
-- [x] Prometheus metrics endpoint
-- [x] Structured logging with slog
-- [x] Configuration management (YAML/JSON)
-- [x] Middleware (logging, request ID, recovery, CORS)
-- [x] OpenAPI-based code generation
-- [x] Unit and integration testing infrastructure
-
-### Short Term
-- [ ] Database migrations with go-migrate
-- [ ] JWT authentication implementation
-- [ ] User management endpoints
-- [ ] Agent registration and management
-- [ ] Docker and docker-compose setup
-
-### Medium Term
-- [ ] OAuth2 integration
-- [ ] Metrics collection from agents
-- [ ] Alert configuration and notification system
-- [ ] Web dashboard (frontend)
-- [ ] TimescaleDB integration for time-series data
-
-### Long Term
-- [ ] Kubernetes deployment with Helm charts
-- [ ] Plugin system for extensibility
-- [ ] Advanced monitoring features
-- [ ] Distributed tracing
-- [ ] Multi-tenant support
+- **Build Tool**: just (command runner, similar to make)
 
 ## API Endpoints
 
@@ -516,9 +517,13 @@ go mod download
 ### API v1
 - `GET /api/v1` - API version information
 
+### Agent Configuration
+- `GET /agent/{agentId}/configuration` - Retrieve agent-specific configuration including monitoring settings, endpoints, and tags (requires `X-Agent-API-Key` header)
+
 ### Future Endpoints
 (To be implemented based on OpenAPI specification)
-- Agent registration and management
+- Agent registration (`POST /agent/register`)
+- Agent status reporting (`POST /agent/report`)
 - Metrics submission and retrieval
 - Alert configuration
 - User authentication and management
@@ -530,15 +535,15 @@ Contributions are welcome! Please follow these guidelines:
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Run tests and linting (`make all`)
+4. Run tests and linting (`just all`)
 5. Commit your changes (`git commit -m 'Add amazing feature'`)
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
 
 ### Code Style
 - Follow standard Go conventions and idioms
-- Run `make fmt` before committing
-- Ensure `make lint` passes
+- Run `just fmt` before committing
+- Ensure `just lint` passes
 - Add tests for new functionality
 - Update documentation as needed
 

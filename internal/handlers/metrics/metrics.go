@@ -13,12 +13,18 @@ import (
 	"github.com/smotra-monitoring/server/internal/logger"
 )
 
+// MetricsProvider defines an interface for handlers that provide metrics
+type MetricsProvider interface {
+	GetMetrics() map[string]uint64
+	GetTitle() string
+}
+
 // Handler handles metrics endpoint
 type Handler struct {
-	logger    *logger.Logger
-	db        database.Database
-	startTime time.Time
-	version   string
+	logger     *logger.Logger
+	db         database.Database
+	startTime  time.Time
+	appVersion string
 
 	// Metrics counters
 	httpRequestsTotal   atomic.Uint64
@@ -32,16 +38,25 @@ type Handler struct {
 
 	// Agent metrics (will be populated from database)
 	agentMetrics sync.Map
+
+	// External metrics providers
+	metricsProviders []MetricsProvider
 }
 
 // NewHandler creates a new metrics handler
-func NewHandler(logger *logger.Logger, db database.Database, version string) *Handler {
+func NewHandler(logger *logger.Logger, db database.Database, appVersion string) *Handler {
 	return &Handler{
-		logger:    logger.WithComponent("metrics"),
-		db:        db,
-		startTime: time.Now(),
-		version:   version,
+		logger:           logger.WithComponent("metrics"),
+		db:               db,
+		startTime:        time.Now(),
+		appVersion:       appVersion,
+		metricsProviders: []MetricsProvider{},
 	}
+}
+
+// RegisterMetricsProvider registers a metrics provider
+func (h *Handler) RegisterMetricsProvider(provider MetricsProvider) {
+	h.metricsProviders = append(h.metricsProviders, provider)
 }
 
 // IncrementHTTPRequests increments HTTP request counters
@@ -76,7 +91,7 @@ func (h *Handler) buildPrometheusMetrics(ctx context.Context) string {
 	// Server info
 	output += "# HELP smotra_info Server information\n"
 	output += "# TYPE smotra_info gauge\n"
-	output += fmt.Sprintf("smotra_info{version=\"%s\"} 1\n", h.version)
+	output += fmt.Sprintf("smotra_info{version=\"%s\"} 1\n", h.appVersion)
 	output += "\n"
 
 	// Uptime
@@ -187,6 +202,33 @@ func (h *Handler) buildPrometheusMetrics(ctx context.Context) string {
 	output += "smotra_checks_total{status=\"success\"} 0\n"
 	output += "smotra_checks_total{status=\"failure\"} 0\n"
 	output += "\n"
+
+	// Configuration handler metrics
+	for _, provider := range h.metricsProviders {
+		title := provider.GetTitle()
+		metrics := provider.GetMetrics()
+
+		if getConfigTotal, ok := metrics["get_configuration_total"]; ok {
+			output += fmt.Sprintf("# HELP smotra_%s_get_total Total number of GET configuration requests\n", title)
+			output += fmt.Sprintf("# TYPE smotra_%s_get_total counter\n", title)
+			output += fmt.Sprintf("smotra_%s_get_total %d\n", title, getConfigTotal)
+			output += "\n"
+		}
+
+		if getConfigSuccess, ok := metrics["get_configuration_success"]; ok {
+			output += fmt.Sprintf("# HELP smotra_%s_get_success_total Total number of successful GET configuration requests\n", title)
+			output += fmt.Sprintf("# TYPE smotra_%s_get_success_total counter\n", title)
+			output += fmt.Sprintf("smotra_%s_get_success_total %d\n", title, getConfigSuccess)
+			output += "\n"
+		}
+
+		if getConfigFailure, ok := metrics["get_configuration_failure"]; ok {
+			output += fmt.Sprintf("# HELP smotra_%s_get_failure_total Total number of failed GET configuration requests\n", title)
+			output += fmt.Sprintf("# TYPE smotra_%s_get_failure_total counter\n", title)
+			output += fmt.Sprintf("smotra_%s_get_failure_total %d\n", title, getConfigFailure)
+			output += "\n"
+		}
+	}
 
 	return output
 }

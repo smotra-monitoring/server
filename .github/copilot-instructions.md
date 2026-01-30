@@ -94,7 +94,108 @@ Database access must be implemented via interface abstractions to allow easy swa
 - Development and testing can use SQLite for simplicity.
 - Database schema is managed using a migration tool go-migrate.
 
+### Database Schema Overview
+
+The database implements a multi-tenant hierarchical structure:
+
+1. **Tenants**: Top-level organizational units
+   - Each tenant can have multiple sections
+   - Identified by UUIDv7
+
+2. **Sections**: Logical groupings within a tenant
+   - Contains agents and tags
+   - Provides namespace separation
+
+3. **Agents**: Monitoring agents deployed on hosts
+   - Belongs to a section
+   - Contains base configuration as JSON blob
+   - Has version tracking for configuration changes
+   - Authenticated via API key (stored as SHA-256 hash)
+   - Can have multiple endpoints and tags
+
+4. **Endpoints**: Target addresses monitored by agents
+   - Each endpoint belongs to an agent
+   - Can be enabled/disabled
+   - Supports port specification
+   - Can have multiple tags
+
+5. **Tags**: Metadata labels for filtering and organization
+   - Belongs to a section
+   - Has scope: 'agent', 'endpoint', or 'global'
+   - Can be assigned to agents and/or endpoints
+   - Changes trigger version bumps and timestamp updates
+
+6. **Automatic Versioning**: Database triggers maintain consistency
+   - Agent version bumps on configuration changes
+   - Endpoint changes ripple up to agent version
+   - Tag changes propagate based on scope
+   - Timestamps automatically updated via triggers
+
+### Database Schema Design
+
+- **Primary Keys**: All entity ID fields (e.g., `id` columns in tables) must use **UUIDv7** format.
+  - UUIDv7 is a time-ordered UUID that provides better performance for database indexes compared to random UUIDs (v4).
+  - The ordered nature of UUIDv7 improves B-tree index efficiency and reduces index fragmentation.
+  - This applies to all entities including tenants, agents, sections, endpoints, users, checks, etc.
+  - In SQL migrations, use appropriate UUID types (`UUID` for PostgreSQL, `TEXT` for SQLite with validation).
+  - When generating UUIDs in application code or tests, use UUIDv7 libraries/functions.
+
+## Database Access and Code Generation
+
+All database interactions must use sqlc-generated code. Direct SQL queries in application code are prohibited.
+
+### sqlc Configuration and Usage
+
+- **Code Generator**: sqlc is used to generate type-safe Go code from SQL queries.
+- **Configuration File**: Located at `./data/db/dev/sqlc/sqlc.yaml`
+- **Generated Package**: `internal/database/queries`
+- **Generation Command**: Use the justfile action `just generate-sqlc` to run code generation.
+
+### Database Migration Files
+
+- **Location**: `data/` folder with environment-specific subfolders
+  - Development: `data/db/dev/migrations/`
+  - Production: `data/prod/` (when applicable)
+- **Format**: SQL migration files (e.g., `0001_schema.up.sql`)
+
+### Query File Organization
+
+- **Location**: `internal/database/queries/` directory
+- **Organization**: Query files must be organized by database entity:
+  - `agents.sql` - All queries related to agents table
+  - `users.sql` - All queries related to users table
+  - `checks.sql` - All queries related to checks table
+  - etc.
+- **Best Practice**: Group related queries by the primary table/entity they operate on.
+
+### Development Workflow
+
+1. Create or modify SQL queries in the appropriate entity file (e.g., `internal/database/queries/agents.sql`)
+2. Run `just generate-sqlc` to regenerate Go code
+3. Import and use the generated code from `internal/database/queries`
+4. Never write raw SQL queries directly in Go code
+
 Server repository structure must follow standard Go project layout conventions, with clear separation of concerns between packages for handlers, services, models, and utilities.
+
+### Middleware Package
+
+The `internal/middleware` package provides HTTP middleware components:
+
+- **middleware.go**: Core middleware functions
+  - `RequestID`: Generates and propagates request IDs
+  - `Logger`: Request/response logging with timing
+  - `Recovery`: Panic recovery with error handling
+  - `CORS`: Cross-origin resource sharing configuration
+  - `responseWriter`: Custom response writer for capturing status codes
+
+- **auth.go**: Authentication middleware
+  - `AgentAPIKeyAuth`: Agent API key authentication
+  - Extracts API key from `X-Agent-API-Key` header
+  - Validates against hashed keys in database
+  - Injects auth info into request context
+  - Uses constant-time comparison for security
+
+All middleware includes comprehensive unit tests and integration tests.
 
 oapi-codegen is used to generate server stubs and models from OpenAPI specifications, ensuring consistency between API documentation and implementation. 
 - internal/api contains the generated code.
@@ -104,6 +205,110 @@ oapi-codegen is used to generate server stubs and models from OpenAPI specificat
 The server must implement robust error handling and logging using a structured logging library slog. Configuration management should be handled via environment variables and configuration files, with support for different environments (development, staging, production).
 
 Codebase must include unit tests and integration tests to ensure reliability and facilitate future development. CI/CD pipelines should be set up to automate testing, building, and deployment processes.
+
+## Error Handling
+
+All HTTP error responses must use the Strict types generated from the OpenAPI specification in the `internal/api` package. 
+
+### Error Response Guidelines
+
+- **Use api.Error**: All error responses must use the `api.Error` struct from the generated API package.
+- **No Inline JSON**: Never return inline JSON for error responses. Always use the typed `api.Error` structure.
+- **Consistent Format**: Error responses must follow the schema defined in the OpenAPI specification to ensure consistency across all endpoints.
+- **Status Codes**: Use appropriate HTTP status codes along with the `api.Error` struct.
+
+Example of correct error handling:
+```go
+import "github.com/yourusername/smotra/internal/api"
+
+// Correct - using api.Error
+errorResponse := api.Error{
+    Message: "Agent not found",
+    Code:    "AGENT_NOT_FOUND",
+}
+w.WriteHeader(http.StatusNotFound)
+json.NewEncoder(w).Encode(errorResponse)
+```
+
+Example of incorrect error handling:
+```go
+// INCORRECT - inline JSON without api.Error
+w.WriteHeader(http.StatusNotFound)
+w.Write([]byte(`{"error": "Agent not found"}`))
+```
+
+## Authentication
+
+The server implements agent API key authentication for protected endpoints. Authentication is handled through middleware and authenticated handler wrappers.
+
+### Authentication Implementation
+
+Authentication components are located in:
+- `internal/middleware/auth.go` - Agent API key authentication middleware
+- `internal/handlers/authenticated_handler.go` - Wrapper for protected endpoints
+
+### Authentication Flow
+
+1. **Agent API Key**: Agents authenticate using an API key passed via the `X-Agent-API-Key` header
+2. **Key Verification**: The middleware validates the API key against the hashed value stored in the database
+3. **Context Injection**: On successful authentication, auth info is injected into the request context
+4. **Handler Wrapper**: Protected endpoints use `AuthenticatedHandler` wrapper to verify authentication
+5. **Agent ID Verification**: The authenticated agent ID must match the requested agent ID in the URL
+
+### Authentication Context
+
+Authentication information is stored in the request context using the `AuthContextKey`:
+
+```go
+type AuthInfo struct {
+    AgentID       string
+    AuthType      string // "agent_api_key" or "oauth2"
+    Authenticated bool
+}
+```
+
+### Using Authentication
+
+**For Protected Endpoints:**
+1. Wrap the handler with `AuthenticatedHandler` instead of `CombinedHandler`
+2. The wrapper automatically checks for valid authentication in the context
+3. Verifies that the authenticated agent matches the requested agent
+4. Returns appropriate 401 (Unauthorized) or 403 (Forbidden) responses on failure
+
+**Example:**
+```go
+authHandler := handlers.NewAuthenticatedHandler(logger, db, apiVersion)
+strictHandler := api.NewStrictHandler(authHandler, nil)
+```
+
+### API Key Security
+
+- API keys are hashed using SHA-256 before storage
+- Comparison uses `crypto/subtle.ConstantTimeCompare` to prevent timing attacks
+- Keys are never logged or exposed in responses
+- Database stores only the hashed value in the `api_key_hash` column
+
+### Future Authentication Support
+
+- OAuth2 authentication is planned (infrastructure partially in place)
+- JWT token support for web interface authentication
+- Role-based access control (RBAC) for different user types
+
+### Implemented Handlers
+
+Current handler implementations are located in `internal/handlers/`:
+
+- **health/**: Health check endpoints (`/healthz`, `/healthz/ready`, `/healthz/live`)
+- **metrics/**: Prometheus metrics endpoint (`/metrics`)
+- **agent_configuration/**: Agent configuration retrieval endpoint (`/agent/{agentId}/configuration`)
+- **handlers.go**: Combined handler that aggregates all individual handlers and implements the OpenAPI strict handler interface
+- **authenticated_handler.go**: Wrapper handler that adds authentication checks for protected endpoints (e.g., agent configuration)
+
+Each handler package includes:
+- Implementation file (e.g., `configuration.go`)
+- Unit tests (e.g., `configuration_test.go`)
+- Integration tests (e.g., `configuration_integration_test.go`)
+- Metrics tracking using atomic counters for concurrent-safe operations
 
 ## Metrics and Observability
 
@@ -169,5 +374,6 @@ output += "# TYPE smotra_myfeature_operations_total counter\n"
 output += fmt.Sprintf("smotra_myfeature_operations_total %d\n", h.myFeatureOperationsTotal.Load())
 ```
 
-[README.md](/README.md) describing server setup and development process
-
+README.md in the project root describes server setup and development process
+TESTING.md describes the testing strategy and how to run tests.
+ROADMAP.md outlines planned features and improvements for future releases.

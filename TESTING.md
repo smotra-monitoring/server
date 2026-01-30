@@ -25,7 +25,9 @@ The project includes comprehensive unit tests and integration tests for all majo
    - Coverage: 52.4% (with integration tests)
 
 4. **internal/middleware** - HTTP middleware
-   - Tests for Logger, Recovery, RequestID, and CORS middleware
+   - Unit tests for Logger, Recovery, RequestID, and CORS middleware
+   - Unit tests for Agent API key authentication (`auth.go`)
+   - Integration tests for authentication flow with database
    - Tests for responseWriter wrapper
    - Tests for chained middleware execution
    - Coverage: 100%
@@ -36,7 +38,23 @@ The project includes comprehensive unit tests and integration tests for all majo
    - Tests for HealthCheck, ReadinessCheck, and LivenessCheck endpoints
    - Coverage: 98.1%
 
-6. **internal/testutil** - Test utilities and helpers
+6. **internal/handlers/authenticated_handler** - Authentication wrapper
+   - Unit tests for authentication verification
+   - Integration tests for protected endpoints
+   - Tests for agent ID matching and access control
+   - Tests for error responses (401, 403)
+
+7. **internal/handlers/metrics** - Prometheus metrics endpoint
+   - Unit tests for metrics tracking
+   - Integration tests for metrics endpoint
+   - Tests for concurrent metric updates
+
+8. **internal/handlers/agent_configuration** - Agent configuration endpoint
+   - Unit tests with mock database
+   - Integration tests with real HTTP server and authentication
+   - Tests for configuration retrieval with tags and endpoints
+
+9. **internal/testutil** - Test utilities and helpers
    - Mock database implementation
    - Test configuration helpers
    - Test database setup utilities
@@ -92,25 +110,25 @@ The project Makefile includes convenient commands for running tests:
 
 ```bash
 # Run all tests
-make test
+just test
 
 # Run unit tests only
-make test-unit
+just test-unit
 
 # Run integration tests only
-make test-integration
+just test-integration
 
 # Run tests with coverage report
-make test-coverage
+just test-coverage
 
 # Run unit tests with coverage
-make test-coverage-unit
+just test-coverage-unit
 
 # Run integration tests with coverage
-make test-coverage-integration
+just test-coverage-integration
 
 # Run tests with verbose output
-make test-verbose
+just test-verbose
 ```
 
 ## Test Organization

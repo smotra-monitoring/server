@@ -11,7 +11,15 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	uuid "github.com/google/uuid"
+	"github.com/oapi-codegen/runtime"
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+)
+
+const (
+	AgentApiKeyScopes             = "AgentApiKey.Scopes"
+	OAuth2AuthorizationCodeScopes = "OAuth2AuthorizationCode.Scopes"
 )
 
 // Defines values for HealthStatusComponentsStatus.
@@ -27,6 +35,55 @@ const (
 	HealthStatusStatusHealthy   HealthStatusStatus = "healthy"
 	HealthStatusStatusUnhealthy HealthStatusStatus = "unhealthy"
 )
+
+// AgentConfig defines model for AgentConfig.
+type AgentConfig struct {
+	// AgentId UUID version 7 as per RFC 4122
+	AgentId UUIDv7 `json:"agent_id"`
+
+	// AgentName Human-readable agent name
+	AgentName string `json:"agent_name"`
+
+	// Endpoints Endpoints to monitor
+	Endpoints  []Endpoint       `json:"endpoints"`
+	Monitoring MonitoringConfig `json:"monitoring"`
+	Server     ServerConfig     `json:"server"`
+	Storage    StorageConfig    `json:"storage"`
+
+	// Tags Tags for this agent (used for mesh organization)
+	Tags *[]string `json:"tags,omitempty"`
+
+	// Version Configuration version (used for syncing with server)
+	Version int32 `json:"version"`
+}
+
+// Endpoint defines model for Endpoint.
+type Endpoint struct {
+	// Address IP address, hostname, or URL
+	Address string `json:"address"`
+	Enabled bool   `json:"enabled"`
+
+	// Id UUID version 7 as per RFC 4122
+	Id   UUIDv7 `json:"id"`
+	Port *int   `json:"port,omitempty"`
+
+	// Tags Tags associated with the target
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// Error defines model for Error.
+type Error struct {
+	Details *[]struct {
+		Field *string `json:"field,omitempty"`
+		Issue *string `json:"issue,omitempty"`
+	} `json:"details,omitempty"`
+
+	// DocumentationUrl Link to relevant documentation
+	DocumentationUrl *string             `json:"documentation_url,omitempty"`
+	Error            string              `json:"error"`
+	Message          string              `json:"message"`
+	RequestId        *openapi_types.UUID `json:"request_id,omitempty"`
+}
 
 // HealthStatus defines model for HealthStatus.
 type HealthStatus struct {
@@ -47,8 +104,86 @@ type HealthStatusComponentsStatus string
 // HealthStatusStatus defines model for HealthStatus.Status.
 type HealthStatusStatus string
 
+// MonitoringConfig defines model for MonitoringConfig.
+type MonitoringConfig struct {
+	// IntervalSecs Interval between checks in seconds
+	IntervalSecs int64 `json:"interval_secs"`
+
+	// MaxConcurrent Maximum number of concurrent checks
+	MaxConcurrent int `json:"max_concurrent"`
+
+	// PingCount Number of pings to send per check
+	PingCount int32 `json:"ping_count"`
+
+	// TimeoutSecs Timeout for each check in seconds
+	TimeoutSecs int64 `json:"timeout_secs"`
+
+	// TracerouteMaxHops Maximum TTL for traceroute
+	TracerouteMaxHops int32 `json:"traceroute_max_hops"`
+
+	// TracerouteOnFailure Enable traceroute on failed pings
+	TracerouteOnFailure bool `json:"traceroute_on_failure"`
+}
+
+// ServerConfig defines model for ServerConfig.
+type ServerConfig struct {
+	// ApiKey API key for authentication
+	ApiKey *string `json:"api_key"`
+
+	// HeartbeatIntervalSecs Heartbeat interval in seconds
+	HeartbeatIntervalSecs int64 `json:"heartbeat_interval_secs"`
+
+	// ReportIntervalSecs Report interval in seconds
+	ReportIntervalSecs int64 `json:"report_interval_secs"`
+
+	// RetryAttempts Retry attempts on failure
+	RetryAttempts int32 `json:"retry_attempts"`
+
+	// TimeoutSecs Connection timeout in seconds
+	TimeoutSecs int64 `json:"timeout_secs"`
+
+	// Url Server URL
+	Url *string `json:"url"`
+
+	// VerifyTls Enable TLS verification
+	VerifyTls bool `json:"verify_tls"`
+}
+
+// StorageConfig defines model for StorageConfig.
+type StorageConfig struct {
+	// CacheDir Directory for storing cached data
+	CacheDir string `json:"cache_dir"`
+
+	// MaxCacheAgeSecs Maximum age of cached results in seconds (e.g., 86400 = 24 hours)
+	MaxCacheAgeSecs int64 `json:"max_cache_age_secs"`
+
+	// MaxCachedResults Maximum number of results to cache
+	MaxCachedResults int `json:"max_cached_results"`
+}
+
+// UUIDv7 UUID version 7 as per RFC 4122
+type UUIDv7 = uuid.UUID
+
+// AgentId UUID version 7 as per RFC 4122
+type AgentId = UUIDv7
+
+// InternalServerError defines model for InternalServerError.
+type InternalServerError = Error
+
+// NotFound defines model for NotFound.
+type NotFound = Error
+
+// NotImplemented defines model for NotImplemented.
+type NotImplemented = Error
+
+// Unauthorized defines model for Unauthorized.
+type Unauthorized = Error
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Get agent configuration
+	// (GET /agent/{agentId}/configuration)
+	GetAgentConfiguration(w http.ResponseWriter, r *http.Request, agentId AgentId)
 	// Health check endpoint
 	// (GET /healthz)
 	HealthCheck(w http.ResponseWriter, r *http.Request)
@@ -66,6 +201,12 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// Get agent configuration
+// (GET /agent/{agentId}/configuration)
+func (_ Unimplemented) GetAgentConfiguration(w http.ResponseWriter, r *http.Request, agentId AgentId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // Health check endpoint
 // (GET /healthz)
@@ -99,6 +240,39 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetAgentConfiguration operation middleware
+func (siw *ServerInterfaceWrapper) GetAgentConfiguration(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "agentId" -------------
+	var agentId AgentId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "agentId", chi.URLParam(r, "agentId"), &agentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "agentId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, AgentApiKeyScopes, []string{})
+
+	ctx = context.WithValue(ctx, OAuth2AuthorizationCodeScopes, []string{"agent:read"})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAgentConfiguration(w, r, agentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // HealthCheck operation middleware
 func (siw *ServerInterfaceWrapper) HealthCheck(w http.ResponseWriter, r *http.Request) {
@@ -270,6 +444,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/agent/{agentId}/configuration", wrapper.GetAgentConfiguration)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/healthz", wrapper.HealthCheck)
 	})
 	r.Group(func(r chi.Router) {
@@ -283,6 +460,69 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 
 	return r
+}
+
+type InternalServerErrorJSONResponse Error
+
+type NotFoundJSONResponse Error
+
+type NotImplementedJSONResponse Error
+
+type UnauthorizedJSONResponse Error
+
+type GetAgentConfigurationRequestObject struct {
+	AgentId AgentId `json:"agentId"`
+}
+
+type GetAgentConfigurationResponseObject interface {
+	VisitGetAgentConfigurationResponse(w http.ResponseWriter) error
+}
+
+type GetAgentConfiguration200JSONResponse AgentConfig
+
+func (response GetAgentConfiguration200JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetAgentConfiguration401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetAgentConfiguration401JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetAgentConfiguration404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetAgentConfiguration404JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetAgentConfiguration501JSONResponse struct{ NotImplementedJSONResponse }
+
+func (response GetAgentConfiguration501JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetAgentConfiguration503JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response GetAgentConfiguration503JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type HealthCheckRequestObject struct {
@@ -367,6 +607,9 @@ func (response PrometheusMetrics200TextResponse) VisitPrometheusMetricsResponse(
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Get agent configuration
+	// (GET /agent/{agentId}/configuration)
+	GetAgentConfiguration(ctx context.Context, request GetAgentConfigurationRequestObject) (GetAgentConfigurationResponseObject, error)
 	// Health check endpoint
 	// (GET /healthz)
 	HealthCheck(ctx context.Context, request HealthCheckRequestObject) (HealthCheckResponseObject, error)
@@ -408,6 +651,32 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// GetAgentConfiguration operation middleware
+func (sh *strictHandler) GetAgentConfiguration(w http.ResponseWriter, r *http.Request, agentId AgentId) {
+	var request GetAgentConfigurationRequestObject
+
+	request.AgentId = agentId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAgentConfiguration(ctx, request.(GetAgentConfigurationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAgentConfiguration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAgentConfigurationResponseObject); ok {
+		if err := validResponse.VisitGetAgentConfigurationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // HealthCheck operation middleware
