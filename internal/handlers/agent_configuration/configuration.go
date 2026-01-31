@@ -165,15 +165,19 @@ func (h *Handler) GetAgentConfiguration(ctx context.Context, request api.GetAgen
 }
 
 // GetMetrics returns the metrics for this handler
-func (h *Handler) GetMetrics() map[string]uint64 {
-	return map[string]uint64{
-		"get_configuration_total":   h.getConfigurationTotal.Load(),
-		"get_configuration_success": h.getConfigurationSuccess.Load(),
-		"get_configuration_failure": h.getConfigurationFailure.Load(),
-	}
-}
+func (h *Handler) GetMetrics() string {
+	metrics := ""
+	metrics += "# HELP smotra_agent_configuration_get_configuration_total Total get configuration requests\n"
+	metrics += "# TYPE smotra_agent_configuration_get_configuration_total counter\n"
+	metrics += fmt.Sprintf("smotra_agent_configuration_get_configuration_total %d\n", h.getConfigurationTotal.Load())
 
-// GetTitle returns the title for this metrics provider
-func (h *Handler) GetTitle() string {
-	return "agent_configuration"
+	metrics += "# HELP smotra_agent_configuration_get_configuration_success_total Successful get configuration requests\n"
+	metrics += "# TYPE smotra_agent_configuration_get_configuration_success_total counter\n"
+	metrics += fmt.Sprintf("smotra_agent_configuration_get_configuration_success_total %d\n", h.getConfigurationSuccess.Load())
+
+	metrics += "# HELP smotra_agent_configuration_get_configuration_failure_total Failed get configuration requests\n"
+	metrics += "# TYPE smotra_agent_configuration_get_configuration_failure_total counter\n"
+	metrics += fmt.Sprintf("smotra_agent_configuration_get_configuration_failure_total %d\n", h.getConfigurationFailure.Load())
+
+	return metrics
 }
