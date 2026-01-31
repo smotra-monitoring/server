@@ -40,12 +40,14 @@ LIMIT 1;
 -- name: MarkAgentClaimClaimed :exec
 UPDATE agent_claims
 SET claimed_at = strftime('%Y-%m-%d %H:%M:%S', 'now'),
-    claimed_by_user_id = ?
+    claimed_by_user_id = ?,
+    api_key_plaintext = ?
 WHERE id = ?;
 
 -- name: MarkAgentClaimAPIKeyDelivered :exec
 UPDATE agent_claims
-SET api_key_delivered = 1
+SET api_key_delivered = 1,
+    api_key_plaintext = NULL  -- Clear plaintext key after delivery
 WHERE id = ?;
 
 -- name: GetPendingAPIKeyDelivery :one
@@ -53,12 +55,12 @@ WHERE id = ?;
 SELECT 
     ac.id,
     ac.claimed_at,
-    a.api_key_hash
+    ac.api_key_plaintext
 FROM agent_claims ac
-JOIN agents a ON a.id = ac.id
 WHERE ac.id = ?
   AND ac.claimed_at IS NOT NULL
   AND ac.api_key_delivered = 0
+  AND ac.api_key_plaintext IS NOT NULL
 LIMIT 1;
 
 -- name: CleanupExpiredClaims :exec

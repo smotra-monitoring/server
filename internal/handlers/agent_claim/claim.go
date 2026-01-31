@@ -147,10 +147,11 @@ func (h *Handler) Handle(ctx context.Context, req api.ClaimAgentRequestObject) (
 		}, nil
 	}
 
-	// Mark claim as claimed
+	// Mark claim as claimed and store API key for delivery
 	err = q.MarkAgentClaimClaimed(ctx, queries.MarkAgentClaimClaimedParams{
-		ClaimedByUserID: userID,
-		ID:              agentIDStr,
+		ClaimedByUserID:  userID,
+		ApiKeyPlaintext:  sql.NullString{String: apiKey, Valid: true},
+		ID:               agentIDStr,
 	})
 
 	if err != nil {
@@ -160,13 +161,6 @@ func (h *Handler) Handle(ctx context.Context, req api.ClaimAgentRequestObject) (
 		)
 		// Don't fail the request - agent was created successfully
 	}
-
-	// TODO: Add api_key_plaintext field to agent_claims table (temporary storage)
-
-	h.logger.WarnContext(ctx, "API key generated but delivery mechanism not yet implemented",
-		slog.String("agentId", agentIDStr),
-		slog.String("apiKey", apiKey[:12]),
-	)
 
 	h.claimSuccessTotal.Add(1)
 
@@ -179,7 +173,7 @@ func (h *Handler) Handle(ctx context.Context, req api.ClaimAgentRequestObject) (
 	return api.ClaimAgent200JSONResponse(api.ClaimAgentResponse{
 		AgentId: req.Body.AgentId,
 		Status:  "claimed",
-		Message: "Agent claimed successfully. API key delivery pending implementation.",
+		Message: "Agent claimed successfully. API key will be delivered on next poll.",
 	}), nil
 }
 

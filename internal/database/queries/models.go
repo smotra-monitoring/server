@@ -31,6 +31,7 @@ type AgentClaim struct {
 	CreatedAt           string
 	ClaimedAt           sql.NullString
 	ClaimedByUserID     sql.NullString
+	ApiKeyPlaintext     sql.NullString
 	ApiKeyDelivered     int64
 }
 

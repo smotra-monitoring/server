@@ -65,7 +65,7 @@ func (q *Queries) CreateAgentClaim(ctx context.Context, arg CreateAgentClaimPara
 }
 
 const getAgentClaim = `-- name: GetAgentClaim :one
-SELECT id, claim_token_hash, hostname, agent_version, claim_token_expires_at, last_seen_at, created_at, claimed_at, claimed_by_user_id, api_key_delivered FROM agent_claims
+SELECT id, claim_token_hash, hostname, agent_version, claim_token_expires_at, last_seen_at, created_at, claimed_at, claimed_by_user_id, api_key_plaintext, api_key_delivered FROM agent_claims
 WHERE id = ? LIMIT 1
 `
 
@@ -82,13 +82,14 @@ func (q *Queries) GetAgentClaim(ctx context.Context, id string) (AgentClaim, err
 		&i.CreatedAt,
 		&i.ClaimedAt,
 		&i.ClaimedByUserID,
+		&i.ApiKeyPlaintext,
 		&i.ApiKeyDelivered,
 	)
 	return i, err
 }
 
 const getAgentClaimForClaiming = `-- name: GetAgentClaimForClaiming :one
-SELECT id, claim_token_hash, hostname, agent_version, claim_token_expires_at, last_seen_at, created_at, claimed_at, claimed_by_user_id, api_key_delivered FROM agent_claims
+SELECT id, claim_token_hash, hostname, agent_version, claim_token_expires_at, last_seen_at, created_at, claimed_at, claimed_by_user_id, api_key_plaintext, api_key_delivered FROM agent_claims
 WHERE id = ?
   AND claim_token_hash = ?
   AND claim_token_expires_at > strftime('%Y-%m-%d %H:%M:%S', 'now')
@@ -115,6 +116,7 @@ func (q *Queries) GetAgentClaimForClaiming(ctx context.Context, arg GetAgentClai
 		&i.CreatedAt,
 		&i.ClaimedAt,
 		&i.ClaimedByUserID,
+		&i.ApiKeyPlaintext,
 		&i.ApiKeyDelivered,
 	)
 	return i, err
@@ -124,31 +126,31 @@ const getPendingAPIKeyDelivery = `-- name: GetPendingAPIKeyDelivery :one
 SELECT 
     ac.id,
     ac.claimed_at,
-    a.api_key_hash
+    ac.api_key_plaintext
 FROM agent_claims ac
-JOIN agents a ON a.id = ac.id
 WHERE ac.id = ?
   AND ac.claimed_at IS NOT NULL
   AND ac.api_key_delivered = 0
+  AND ac.api_key_plaintext IS NOT NULL
 LIMIT 1
 `
 
 type GetPendingAPIKeyDeliveryRow struct {
-	ID         string
-	ClaimedAt  sql.NullString
-	ApiKeyHash string
+	ID              string
+	ClaimedAt       sql.NullString
+	ApiKeyPlaintext sql.NullString
 }
 
 // Agent polls this to get API key after being claimed
 func (q *Queries) GetPendingAPIKeyDelivery(ctx context.Context, id string) (GetPendingAPIKeyDeliveryRow, error) {
 	row := q.db.QueryRowContext(ctx, getPendingAPIKeyDelivery, id)
 	var i GetPendingAPIKeyDeliveryRow
-	err := row.Scan(&i.ID, &i.ClaimedAt, &i.ApiKeyHash)
+	err := row.Scan(&i.ID, &i.ClaimedAt, &i.ApiKeyPlaintext)
 	return i, err
 }
 
 const listPendingDeliveries = `-- name: ListPendingDeliveries :many
-SELECT id, claim_token_hash, hostname, agent_version, claim_token_expires_at, last_seen_at, created_at, claimed_at, claimed_by_user_id, api_key_delivered FROM agent_claims
+SELECT id, claim_token_hash, hostname, agent_version, claim_token_expires_at, last_seen_at, created_at, claimed_at, claimed_by_user_id, api_key_plaintext, api_key_delivered FROM agent_claims
 WHERE claimed_at IS NOT NULL
   AND api_key_delivered = 0
 ORDER BY claimed_at ASC
@@ -173,6 +175,7 @@ func (q *Queries) ListPendingDeliveries(ctx context.Context) ([]AgentClaim, erro
 			&i.CreatedAt,
 			&i.ClaimedAt,
 			&i.ClaimedByUserID,
+			&i.ApiKeyPlaintext,
 			&i.ApiKeyDelivered,
 		); err != nil {
 			return nil, err
@@ -190,7 +193,7 @@ func (q *Queries) ListPendingDeliveries(ctx context.Context) ([]AgentClaim, erro
 
 const listUnclaimedAgents = `-- name: ListUnclaimedAgents :many
 
-SELECT id, claim_token_hash, hostname, agent_version, claim_token_expires_at, last_seen_at, created_at, claimed_at, claimed_by_user_id, api_key_delivered FROM agent_claims
+SELECT id, claim_token_hash, hostname, agent_version, claim_token_expires_at, last_seen_at, created_at, claimed_at, claimed_by_user_id, api_key_plaintext, api_key_delivered FROM agent_claims
 WHERE claimed_at IS NULL
   AND claim_token_expires_at > strftime('%Y-%m-%d %H:%M:%S', 'now')
 ORDER BY created_at DESC
@@ -216,6 +219,7 @@ func (q *Queries) ListUnclaimedAgents(ctx context.Context) ([]AgentClaim, error)
 			&i.CreatedAt,
 			&i.ClaimedAt,
 			&i.ClaimedByUserID,
+			&i.ApiKeyPlaintext,
 			&i.ApiKeyDelivered,
 		); err != nil {
 			return nil, err
@@ -233,7 +237,8 @@ func (q *Queries) ListUnclaimedAgents(ctx context.Context) ([]AgentClaim, error)
 
 const markAgentClaimAPIKeyDelivered = `-- name: MarkAgentClaimAPIKeyDelivered :exec
 UPDATE agent_claims
-SET api_key_delivered = 1
+SET api_key_delivered = 1,
+    api_key_plaintext = NULL  -- Clear plaintext key after delivery
 WHERE id = ?
 `
 
@@ -245,17 +250,19 @@ func (q *Queries) MarkAgentClaimAPIKeyDelivered(ctx context.Context, id string) 
 const markAgentClaimClaimed = `-- name: MarkAgentClaimClaimed :exec
 UPDATE agent_claims
 SET claimed_at = strftime('%Y-%m-%d %H:%M:%S', 'now'),
-    claimed_by_user_id = ?
+    claimed_by_user_id = ?,
+    api_key_plaintext = ?
 WHERE id = ?
 `
 
 type MarkAgentClaimClaimedParams struct {
 	ClaimedByUserID sql.NullString
+	ApiKeyPlaintext sql.NullString
 	ID              string
 }
 
 func (q *Queries) MarkAgentClaimClaimed(ctx context.Context, arg MarkAgentClaimClaimedParams) error {
-	_, err := q.db.ExecContext(ctx, markAgentClaimClaimed, arg.ClaimedByUserID, arg.ID)
+	_, err := q.db.ExecContext(ctx, markAgentClaimClaimed, arg.ClaimedByUserID, arg.ApiKeyPlaintext, arg.ID)
 	return err
 }
 

@@ -99,6 +99,15 @@ func (h *Handler) Handle(ctx context.Context, req api.GetAgentClaimStatusRequest
 	// Get the agent record to retrieve API key
 	pendingDelivery, err := q.GetPendingAPIKeyDelivery(ctx, agentIDStr)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			// API key already delivered or not yet ready
+			h.pollPendingTotal.Add(1)
+			pending := api.ClaimStatusPending{
+				Status: "pending_claim",
+			}
+			return newClaimStatus200Response(pending)
+		}
+		
 		h.pollFailedTotal.Add(1)
 		h.logger.ErrorContext(ctx, "Failed to retrieve pending API key for delivery",
 			slog.String("agentId", agentIDStr),
@@ -112,7 +121,21 @@ func (h *Handler) Handle(ctx context.Context, req api.GetAgentClaimStatusRequest
 		}, nil
 	}
 
-	// Mark API key as delivered
+	// Validate we have a plaintext key
+	if !pendingDelivery.ApiKeyPlaintext.Valid || pendingDelivery.ApiKeyPlaintext.String == "" {
+		h.pollFailedTotal.Add(1)
+		h.logger.ErrorContext(ctx, "API key plaintext is missing",
+			slog.String("agentId", agentIDStr),
+		)
+		return api.GetAgentClaimStatus500JSONResponse{
+			InternalServerErrorJSONResponse: api.InternalServerErrorJSONResponse{
+				Error:   "internal_error",
+				Message: "API key not available",
+			},
+		}, nil
+	}
+
+	// Mark API key as delivered (this will clear the plaintext)
 	err = q.MarkAgentClaimAPIKeyDelivered(ctx, agentIDStr)
 	if err != nil {
 		h.pollFailedTotal.Add(1)
@@ -127,7 +150,7 @@ func (h *Handler) Handle(ctx context.Context, req api.GetAgentClaimStatusRequest
 
 	claimed := api.ClaimStatusClaimed{
 		Status:    "claimed",
-		ApiKey:    pendingDelivery.ApiKeyHash, // Note: This should be the actual API key, not hash
+		ApiKey:    pendingDelivery.ApiKeyPlaintext.String,
 		ConfigUrl: fmt.Sprintf("/agents/%s/configuration", agentIDStr),
 	}
 
