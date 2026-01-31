@@ -292,26 +292,26 @@ type NotImplemented = Error
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = Error
 
-// RegisterAgentSelfJSONRequestBody defines body for RegisterAgentSelf for application/json ContentType.
-type RegisterAgentSelfJSONRequestBody = AgentSelfRegistration
-
 // ClaimAgentJSONRequestBody defines body for ClaimAgent for application/json ContentType.
 type ClaimAgentJSONRequestBody = ClaimAgentRequest
 
+// RegisterAgentSelfJSONRequestBody defines body for RegisterAgentSelf for application/json ContentType.
+type RegisterAgentSelfJSONRequestBody = AgentSelfRegistration
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Claim an agent (Web UI)
+	// (POST /agent/claim)
+	ClaimAgent(w http.ResponseWriter, r *http.Request)
 	// Agent self-registration (unclaimed)
 	// (POST /agent/register)
 	RegisterAgentSelf(w http.ResponseWriter, r *http.Request)
+	// Check agent claim status (polling endpoint)
+	// (GET /agent/{agentId}/claim-status)
+	GetAgentClaimStatus(w http.ResponseWriter, r *http.Request, agentId AgentId)
 	// Get agent configuration
 	// (GET /agent/{agentId}/configuration)
 	GetAgentConfiguration(w http.ResponseWriter, r *http.Request, agentId AgentId)
-	// Claim an agent (Web UI)
-	// (POST /agents/claim)
-	ClaimAgent(w http.ResponseWriter, r *http.Request)
-	// Check agent claim status (polling endpoint)
-	// (GET /agents/{agentId}/claim-status)
-	GetAgentClaimStatus(w http.ResponseWriter, r *http.Request, agentId AgentId)
 	// Health check endpoint
 	// (GET /healthz)
 	HealthCheck(w http.ResponseWriter, r *http.Request)
@@ -330,27 +330,27 @@ type ServerInterface interface {
 
 type Unimplemented struct{}
 
+// Claim an agent (Web UI)
+// (POST /agent/claim)
+func (_ Unimplemented) ClaimAgent(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Agent self-registration (unclaimed)
 // (POST /agent/register)
 func (_ Unimplemented) RegisterAgentSelf(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Check agent claim status (polling endpoint)
+// (GET /agent/{agentId}/claim-status)
+func (_ Unimplemented) GetAgentClaimStatus(w http.ResponseWriter, r *http.Request, agentId AgentId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Get agent configuration
 // (GET /agent/{agentId}/configuration)
 func (_ Unimplemented) GetAgentConfiguration(w http.ResponseWriter, r *http.Request, agentId AgentId) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Claim an agent (Web UI)
-// (POST /agents/claim)
-func (_ Unimplemented) ClaimAgent(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Check agent claim status (polling endpoint)
-// (GET /agents/{agentId}/claim-status)
-func (_ Unimplemented) GetAgentClaimStatus(w http.ResponseWriter, r *http.Request, agentId AgentId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -387,11 +387,56 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
+// ClaimAgent operation middleware
+func (siw *ServerInterfaceWrapper) ClaimAgent(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, OAuth2AuthorizationCodeScopes, []string{"agent:write"})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClaimAgent(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RegisterAgentSelf operation middleware
 func (siw *ServerInterfaceWrapper) RegisterAgentSelf(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RegisterAgentSelf(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAgentClaimStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetAgentClaimStatus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "agentId" -------------
+	var agentId AgentId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "agentId", chi.URLParam(r, "agentId"), &agentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "agentId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAgentClaimStatus(w, r, agentId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -425,51 +470,6 @@ func (siw *ServerInterfaceWrapper) GetAgentConfiguration(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAgentConfiguration(w, r, agentId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ClaimAgent operation middleware
-func (siw *ServerInterfaceWrapper) ClaimAgent(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, OAuth2AuthorizationCodeScopes, []string{"agent:write"})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ClaimAgent(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetAgentClaimStatus operation middleware
-func (siw *ServerInterfaceWrapper) GetAgentClaimStatus(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "agentId" -------------
-	var agentId AgentId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "agentId", chi.URLParam(r, "agentId"), &agentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "agentId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAgentClaimStatus(w, r, agentId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -649,16 +649,16 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/agent/claim", wrapper.ClaimAgent)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/agent/register", wrapper.RegisterAgentSelf)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/agent/{agentId}/claim-status", wrapper.GetAgentClaimStatus)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/agent/{agentId}/configuration", wrapper.GetAgentConfiguration)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/agents/claim", wrapper.ClaimAgent)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/agents/{agentId}/claim-status", wrapper.GetAgentClaimStatus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/healthz", wrapper.HealthCheck)
@@ -685,107 +685,6 @@ type NotFoundJSONResponse Error
 type NotImplementedJSONResponse Error
 
 type UnauthorizedJSONResponse Error
-
-type RegisterAgentSelfRequestObject struct {
-	Body *RegisterAgentSelfJSONRequestBody
-}
-
-type RegisterAgentSelfResponseObject interface {
-	VisitRegisterAgentSelfResponse(w http.ResponseWriter) error
-}
-
-type RegisterAgentSelf200JSONResponse AgentRegistrationResponse
-
-func (response RegisterAgentSelf200JSONResponse) VisitRegisterAgentSelfResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RegisterAgentSelf201JSONResponse AgentRegistrationResponse
-
-func (response RegisterAgentSelf201JSONResponse) VisitRegisterAgentSelfResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RegisterAgentSelf400JSONResponse struct{ BadRequestJSONResponse }
-
-func (response RegisterAgentSelf400JSONResponse) VisitRegisterAgentSelfResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RegisterAgentSelf500JSONResponse struct {
-	InternalServerErrorJSONResponse
-}
-
-func (response RegisterAgentSelf500JSONResponse) VisitRegisterAgentSelfResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type GetAgentConfigurationRequestObject struct {
-	AgentId AgentId `json:"agentId"`
-}
-
-type GetAgentConfigurationResponseObject interface {
-	VisitGetAgentConfigurationResponse(w http.ResponseWriter) error
-}
-
-type GetAgentConfiguration200JSONResponse AgentConfig
-
-func (response GetAgentConfiguration200JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type GetAgentConfiguration401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response GetAgentConfiguration401JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type GetAgentConfiguration404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response GetAgentConfiguration404JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type GetAgentConfiguration501JSONResponse struct{ NotImplementedJSONResponse }
-
-func (response GetAgentConfiguration501JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(501)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type GetAgentConfiguration503JSONResponse struct {
-	InternalServerErrorJSONResponse
-}
-
-func (response GetAgentConfiguration503JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(503)
-
-	return json.NewEncoder(w).Encode(response)
-}
 
 type ClaimAgentRequestObject struct {
 	Body *ClaimAgentJSONRequestBody
@@ -860,6 +759,52 @@ func (response ClaimAgent500JSONResponse) VisitClaimAgentResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response)
 }
 
+type RegisterAgentSelfRequestObject struct {
+	Body *RegisterAgentSelfJSONRequestBody
+}
+
+type RegisterAgentSelfResponseObject interface {
+	VisitRegisterAgentSelfResponse(w http.ResponseWriter) error
+}
+
+type RegisterAgentSelf200JSONResponse AgentRegistrationResponse
+
+func (response RegisterAgentSelf200JSONResponse) VisitRegisterAgentSelfResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RegisterAgentSelf201JSONResponse AgentRegistrationResponse
+
+func (response RegisterAgentSelf201JSONResponse) VisitRegisterAgentSelfResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RegisterAgentSelf400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RegisterAgentSelf400JSONResponse) VisitRegisterAgentSelfResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RegisterAgentSelf500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response RegisterAgentSelf500JSONResponse) VisitRegisterAgentSelfResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetAgentClaimStatusRequestObject struct {
 	AgentId AgentId `json:"agentId"`
 }
@@ -895,6 +840,61 @@ type GetAgentClaimStatus500JSONResponse struct {
 func (response GetAgentClaimStatus500JSONResponse) VisitGetAgentClaimStatusResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetAgentConfigurationRequestObject struct {
+	AgentId AgentId `json:"agentId"`
+}
+
+type GetAgentConfigurationResponseObject interface {
+	VisitGetAgentConfigurationResponse(w http.ResponseWriter) error
+}
+
+type GetAgentConfiguration200JSONResponse AgentConfig
+
+func (response GetAgentConfiguration200JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetAgentConfiguration401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetAgentConfiguration401JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetAgentConfiguration404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetAgentConfiguration404JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetAgentConfiguration501JSONResponse struct{ NotImplementedJSONResponse }
+
+func (response GetAgentConfiguration501JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetAgentConfiguration503JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response GetAgentConfiguration503JSONResponse) VisitGetAgentConfigurationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -981,18 +981,18 @@ func (response PrometheusMetrics200TextResponse) VisitPrometheusMetricsResponse(
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Claim an agent (Web UI)
+	// (POST /agent/claim)
+	ClaimAgent(ctx context.Context, request ClaimAgentRequestObject) (ClaimAgentResponseObject, error)
 	// Agent self-registration (unclaimed)
 	// (POST /agent/register)
 	RegisterAgentSelf(ctx context.Context, request RegisterAgentSelfRequestObject) (RegisterAgentSelfResponseObject, error)
+	// Check agent claim status (polling endpoint)
+	// (GET /agent/{agentId}/claim-status)
+	GetAgentClaimStatus(ctx context.Context, request GetAgentClaimStatusRequestObject) (GetAgentClaimStatusResponseObject, error)
 	// Get agent configuration
 	// (GET /agent/{agentId}/configuration)
 	GetAgentConfiguration(ctx context.Context, request GetAgentConfigurationRequestObject) (GetAgentConfigurationResponseObject, error)
-	// Claim an agent (Web UI)
-	// (POST /agents/claim)
-	ClaimAgent(ctx context.Context, request ClaimAgentRequestObject) (ClaimAgentResponseObject, error)
-	// Check agent claim status (polling endpoint)
-	// (GET /agents/{agentId}/claim-status)
-	GetAgentClaimStatus(ctx context.Context, request GetAgentClaimStatusRequestObject) (GetAgentClaimStatusResponseObject, error)
 	// Health check endpoint
 	// (GET /healthz)
 	HealthCheck(ctx context.Context, request HealthCheckRequestObject) (HealthCheckResponseObject, error)
@@ -1036,63 +1036,6 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
-// RegisterAgentSelf operation middleware
-func (sh *strictHandler) RegisterAgentSelf(w http.ResponseWriter, r *http.Request) {
-	var request RegisterAgentSelfRequestObject
-
-	var body RegisterAgentSelfJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.RegisterAgentSelf(ctx, request.(RegisterAgentSelfRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "RegisterAgentSelf")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(RegisterAgentSelfResponseObject); ok {
-		if err := validResponse.VisitRegisterAgentSelfResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetAgentConfiguration operation middleware
-func (sh *strictHandler) GetAgentConfiguration(w http.ResponseWriter, r *http.Request, agentId AgentId) {
-	var request GetAgentConfigurationRequestObject
-
-	request.AgentId = agentId
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetAgentConfiguration(ctx, request.(GetAgentConfigurationRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetAgentConfiguration")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetAgentConfigurationResponseObject); ok {
-		if err := validResponse.VisitGetAgentConfigurationResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // ClaimAgent operation middleware
 func (sh *strictHandler) ClaimAgent(w http.ResponseWriter, r *http.Request) {
 	var request ClaimAgentRequestObject
@@ -1124,6 +1067,37 @@ func (sh *strictHandler) ClaimAgent(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// RegisterAgentSelf operation middleware
+func (sh *strictHandler) RegisterAgentSelf(w http.ResponseWriter, r *http.Request) {
+	var request RegisterAgentSelfRequestObject
+
+	var body RegisterAgentSelfJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RegisterAgentSelf(ctx, request.(RegisterAgentSelfRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RegisterAgentSelf")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RegisterAgentSelfResponseObject); ok {
+		if err := validResponse.VisitRegisterAgentSelfResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetAgentClaimStatus operation middleware
 func (sh *strictHandler) GetAgentClaimStatus(w http.ResponseWriter, r *http.Request, agentId AgentId) {
 	var request GetAgentClaimStatusRequestObject
@@ -1143,6 +1117,32 @@ func (sh *strictHandler) GetAgentClaimStatus(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetAgentClaimStatusResponseObject); ok {
 		if err := validResponse.VisitGetAgentClaimStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAgentConfiguration operation middleware
+func (sh *strictHandler) GetAgentConfiguration(w http.ResponseWriter, r *http.Request, agentId AgentId) {
+	var request GetAgentConfigurationRequestObject
+
+	request.AgentId = agentId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAgentConfiguration(ctx, request.(GetAgentConfigurationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAgentConfiguration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAgentConfigurationResponseObject); ok {
+		if err := validResponse.VisitGetAgentConfigurationResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
