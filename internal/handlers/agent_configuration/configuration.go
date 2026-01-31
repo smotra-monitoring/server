@@ -170,14 +170,19 @@ func (h *Handler) GetMetrics() string {
 	metrics += "# HELP smotra_agent_configuration_get_configuration_total Total get configuration requests\n"
 	metrics += "# TYPE smotra_agent_configuration_get_configuration_total counter\n"
 	metrics += fmt.Sprintf("smotra_agent_configuration_get_configuration_total %d\n", h.getConfigurationTotal.Load())
+	metrics += "\n"
 
 	metrics += "# HELP smotra_agent_configuration_get_configuration_success_total Successful get configuration requests\n"
 	metrics += "# TYPE smotra_agent_configuration_get_configuration_success_total counter\n"
 	metrics += fmt.Sprintf("smotra_agent_configuration_get_configuration_success_total %d\n", h.getConfigurationSuccess.Load())
+	metrics += "\n"
 
 	metrics += "# HELP smotra_agent_configuration_get_configuration_failure_total Failed get configuration requests\n"
 	metrics += "# TYPE smotra_agent_configuration_get_configuration_failure_total counter\n"
 	metrics += fmt.Sprintf("smotra_agent_configuration_get_configuration_failure_total %d\n", h.getConfigurationFailure.Load())
+	metrics += "\n"
+
+	metrics += "\n"
 
 	return metrics
 }
