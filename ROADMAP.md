@@ -36,8 +36,6 @@
 - [ ] Update copilot-instructions.md to add metrics to any new entities that might require it
 - [ ] Add metrics for agent_register, agent_claim_status, agent_claim. The way to go is to use RegisterMetricsProvider.
 
-- [ ] Remove development-only API key logging
-
 - [ ] Implement rate-limiting for endpoints that are using security schema AgentApiKey
 
 ### Short Term
