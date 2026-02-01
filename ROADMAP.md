@@ -28,13 +28,10 @@
 ### Bugfixes that are part of a current PR
 - [ ] Remove CreateAgent from agent.sql, it can be safely replaced by CreateAgentFromClaim. Then `just regenerate-sqlc` and fix tests. CreateAgent only used in tests. 
 
-- [ ] In claim.go Handle: add check on SectionID. SectionID must belong to the same tenant as user. 
-
-- [ ] Add api_key_plaintext to agent_claims schema
-- [ ] Update GetPendingAPIKeyDelivery query to return plaintext key
 - [ ] Implement OAuth2 user context extraction
+- [ ] After implementing OAuth2: In claim.go Handle: add check on SectionID. SectionID must belong to the same tenant as the user.
+- [ ] After implemenitng OAuth2: In claim_integration_test.go. Find "TODO:....." and uncomment code lines to enable "user checks".
 
-- [ ] Add comprehensive tests
 
 - [ ] Update copilot-instructions.md to add metrics to any new entities that might require it
 - [ ] Add metrics for agent_register, agent_claim_status, agent_claim. The way to go is to use RegisterMetricsProvider.

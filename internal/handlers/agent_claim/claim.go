@@ -60,13 +60,36 @@ func (h *Handler) Handle(ctx context.Context, req api.ClaimAgentRequestObject) (
 	// Hash the provided claim token
 	claimTokenHash := hashClaimToken(req.Body.ClaimToken)
 
-	// Get agent claim for claiming (validates token, expiration, and unclaimed status)
-	claim, err := q.GetAgentClaimForClaiming(ctx, queries.GetAgentClaimForClaimingParams{
+	// Get agent claimFromDB for claiming (validates token, expiration, and unclaimed status)
+	claimFromDB, err := q.GetAgentClaim(ctx, agentIDStr)
+
+	if err != nil {
+		h.claimNotFoundTotal.Add(1)
+		h.logger.WarnContext(ctx, "Agent claim not found or invalid",
+			slog.String("agentId", agentIDStr),
+			slog.String("error", err.Error()),
+		)
+		return api.ClaimAgent404JSONResponse(api.Error{
+			Error:   "claim_not_found",
+			Message: "Claim not found or invalid",
+		}), nil
+	}
+
+	// Get agent claimFromDB for claiming (validates token, expiration, and unclaimed status)
+	claimFromDB, err = q.GetAgentClaimForClaiming(ctx, queries.GetAgentClaimForClaimingParams{
 		ID:             agentIDStr,
 		ClaimTokenHash: claimTokenHash,
 	})
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			h.claimAlreadyClaimedTotal.Add(1)
+			return api.ClaimAgent409JSONResponse(api.Error{
+				Error:   "already_claimed_or_invalid",
+				Message: "Agent has already been claimed or claim token is invalid/expired",
+			}), nil
+		}
+
 		h.claimNotFoundTotal.Add(1)
 		h.logger.WarnContext(ctx, "Agent claim not found or invalid",
 			slog.String("agentId", agentIDStr),
@@ -79,7 +102,7 @@ func (h *Handler) Handle(ctx context.Context, req api.ClaimAgentRequestObject) (
 	}
 
 	// Double-check it's not already claimed (additional safety)
-	if claim.ClaimedAt.Valid {
+	if claimFromDB.ClaimedAt.Valid {
 		h.claimAlreadyClaimedTotal.Add(1)
 		return api.ClaimAgent409JSONResponse(api.Error{
 			Error:   "already_claimed",
@@ -88,7 +111,7 @@ func (h *Handler) Handle(ctx context.Context, req api.ClaimAgentRequestObject) (
 	}
 
 	// Verify constant-time comparison of token hash (extra security)
-	if subtle.ConstantTimeCompare([]byte(claim.ClaimTokenHash), []byte(claimTokenHash)) != 1 {
+	if subtle.ConstantTimeCompare([]byte(claimFromDB.ClaimTokenHash), []byte(claimTokenHash)) != 1 {
 		h.claimInvalidTokenTotal.Add(1)
 		return api.ClaimAgent403JSONResponse(api.Error{
 			Error:   "invalid_claim_token",
@@ -119,7 +142,7 @@ func (h *Handler) Handle(ctx context.Context, req api.ClaimAgentRequestObject) (
 	var userID sql.NullString // Will be populated from JWT/OAuth2 context
 
 	// Determine agent name - use hostname from claim
-	agentName := claim.Hostname
+	agentName := claimFromDB.Hostname
 	if req.Body.Name != nil && *req.Body.Name != "" {
 		agentName = *req.Body.Name
 	}
@@ -131,7 +154,7 @@ func (h *Handler) Handle(ctx context.Context, req api.ClaimAgentRequestObject) (
 		Name:         agentName,
 		ApiKeyHash:   apiKeyHash,
 		BaseConfig:   "{}", // Default empty config
-		AgentVersion: sql.NullString{String: claim.AgentVersion, Valid: true},
+		AgentVersion: sql.NullString{String: claimFromDB.AgentVersion, Valid: true},
 	})
 
 	if err != nil {
