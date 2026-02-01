@@ -156,7 +156,7 @@ func TestGetAgentClaimStatus_Integration_PendingClaim(t *testing.T) {
 	}
 }
 
-func TestGetAgentClaimStatus_Integration_ClaimedWithAPIKeyDelivery(t *testing.T) {
+func TestGetAgentClaimStatus_Integration_AlreadyDelivered1(t *testing.T) {
 	log := logger.Default()
 	db := testutil.SetupTestSQLiteDB(t)
 	ctx := context.Background()
@@ -221,17 +221,17 @@ func TestGetAgentClaimStatus_Integration_ClaimedWithAPIKeyDelivery(t *testing.T)
 		t.Errorf("Expected status 200, got %d. Body: %s", w1.Code, w1.Body.String())
 	}
 
-	var response1 map[string]interface{}
+	var response1 api.ClaimStatusClaimed
 	if err := json.Unmarshal(w1.Body.Bytes(), &response1); err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}
 
-	if status, ok := response1["status"].(string); !ok || status != "claimed" {
-		t.Errorf("Expected status 'claimed', got '%v'", response1["status"])
+	if response1.Status != "claimed" {
+		t.Errorf("Expected status 'claimed', got '%v'", response1.Status)
 	}
 
-	if apiKey, ok := response1["api_key"].(string); !ok || apiKey != testAPIKey {
-		t.Errorf("Expected api_key '%s', got '%v'", testAPIKey, response1["api_key"])
+	if response1.ApiKey == "" || response1.ApiKey != testAPIKey {
+		t.Errorf("Expected api_key '%s', got '%v'", testAPIKey, response1.ApiKey)
 	}
 
 	// Second poll - API key should be cleared (already delivered)
@@ -243,14 +243,14 @@ func TestGetAgentClaimStatus_Integration_ClaimedWithAPIKeyDelivery(t *testing.T)
 		t.Errorf("Expected status 200, got %d. Body: %s", w2.Code, w2.Body.String())
 	}
 
-	var response2 map[string]interface{}
+	var response2 api.ClaimStatusPending
 	if err := json.Unmarshal(w2.Body.Bytes(), &response2); err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}
 
 	// Should return pending_claim after delivery
-	if status, ok := response2["status"].(string); !ok || status != "pending_claim" {
-		t.Errorf("Expected status 'pending_claim' after delivery, got '%v'", response2["status"])
+	if response2.Status != "pending_claim" {
+		t.Errorf("Expected status 'pending_claim' after delivery, got '%v'", response2.Status)
 	}
 
 	// Verify api_key_delivered flag is set
@@ -268,7 +268,7 @@ func TestGetAgentClaimStatus_Integration_ClaimedWithAPIKeyDelivery(t *testing.T)
 	}
 }
 
-func TestGetAgentClaimStatus_Integration_AlreadyDelivered(t *testing.T) {
+func TestGetAgentClaimStatus_Integration_AlreadyDelivered2(t *testing.T) {
 	log := logger.Default()
 	db := testutil.SetupTestSQLiteDB(t)
 	ctx := context.Background()
