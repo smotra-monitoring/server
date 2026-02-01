@@ -302,13 +302,13 @@ func TestRegisterAgentSelf_Integration_InvalidData(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		body           api.AgentSelfRegistration
+		body           *api.AgentSelfRegistration
 		expectedStatus int
 		expectedError  string
 	}{
 		{
 			name: "empty hostname",
-			body: api.AgentSelfRegistration{
+			body: &api.AgentSelfRegistration{
 				AgentId:        uuid.Must(uuid.NewV7()),
 				ClaimTokenHash: "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
 				Hostname:       "",
@@ -319,7 +319,7 @@ func TestRegisterAgentSelf_Integration_InvalidData(t *testing.T) {
 		},
 		{
 			name: "empty version",
-			body: api.AgentSelfRegistration{
+			body: &api.AgentSelfRegistration{
 				AgentId:        uuid.Must(uuid.NewV7()),
 				ClaimTokenHash: "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
 				Hostname:       "test-host",
@@ -330,7 +330,7 @@ func TestRegisterAgentSelf_Integration_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid token length",
-			body: api.AgentSelfRegistration{
+			body: &api.AgentSelfRegistration{
 				AgentId:        uuid.Must(uuid.NewV7()),
 				ClaimTokenHash: "invalid-hash",
 				Hostname:       "test-host",
@@ -341,12 +341,20 @@ func TestRegisterAgentSelf_Integration_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid token decode to hex",
-			body: api.AgentSelfRegistration{
+			body: &api.AgentSelfRegistration{
 				AgentId:        uuid.Must(uuid.NewV7()),
 				ClaimTokenHash: "11111111111111111111g1111111111111111111111111111111111111111111",
 				Hostname:       "test-host",
 				AgentVersion:   "1.0.0",
 			},
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "validation_error",
+		},
+		// IMPORTANT: in this test body will be converted to default values, not nil,
+		// because all field in AgentSelfRegistration are mandatory.
+		{
+			name:           "body nil",
+			body:           nil,
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  "validation_error",
 		},
