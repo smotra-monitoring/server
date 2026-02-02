@@ -11,6 +11,11 @@ import (
 	"github.com/smotra-monitoring/server/internal/logger"
 )
 
+// NewMetricsHandler creates a new metrics handler
+func NewMetricsHandler(logger *logger.Logger, db database.Database, appVersion string) *metrics.Handler {
+	return metrics.NewHandler(logger, db, appVersion)
+}
+
 // HealthHandler combines all handler implementations
 type HealthHandler struct {
 	health  *health.Handler
@@ -18,10 +23,10 @@ type HealthHandler struct {
 }
 
 // NewHealthHandler creates a new health handler
-func NewHealthHandler(logger *logger.Logger, db database.Database, cfg *config.Config, appVersion string) *HealthHandler {
+func NewHealthHandler(logger *logger.Logger, db database.Database, cfg *config.Config, appVersion string, metricsHandler *metrics.Handler) *HealthHandler {
 	return &HealthHandler{
 		health:  health.NewHandler(logger, db, appVersion),
-		metrics: metrics.NewHandler(logger, db, appVersion),
+		metrics: metricsHandler,
 	}
 }
 
@@ -43,10 +48,6 @@ func (h *HealthHandler) ReadinessCheck(ctx context.Context, request healthAPI.Re
 // PrometheusMetrics delegates to metrics handler
 func (h *HealthHandler) PrometheusMetrics(ctx context.Context, request healthAPI.PrometheusMetricsRequestObject) (healthAPI.PrometheusMetricsResponseObject, error) {
 	return h.metrics.PrometheusMetrics(ctx, request)
-}
-
-func (h *HealthHandler) GetMetricsHandler() *metrics.Handler {
-	return h.metrics
 }
 
 // SetReady sets the readiness status

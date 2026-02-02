@@ -16,8 +16,9 @@ func TestAuthenticatedHandler_GetAgentConfiguration_NoAuth(t *testing.T) {
 	log := logger.New(logger.Config{Level: "error", Format: "json"})
 	mockDB := testutil.NewMockDatabase()
 	cfg := testutil.DefaultTestConfig()
-	healthHandler := NewHealthHandler(log, mockDB, cfg, "test")
-	handler := NewAuthenticatedHandler(log, mockDB, cfg, "test", healthHandler.GetMetricsHandler())
+	metricsHandler := NewMetricsHandler(log, mockDB, "test")
+	_ = NewHealthHandler(log, mockDB, cfg, "test", metricsHandler)
+	handler := NewAuthenticatedHandler(log, mockDB, cfg, "test", metricsHandler)
 
 	agentID, _ := uuid.Parse("019bdeb2-50dc-794e-808b-cf47526b867f")
 	request := api.GetAgentConfigurationRequestObject{
@@ -50,8 +51,9 @@ func TestAuthenticatedHandler_GetAgentConfiguration_WrongAgent(t *testing.T) {
 	log := logger.New(logger.Config{Level: "error", Format: "json"})
 	mockDB := testutil.NewMockDatabase()
 	cfg := testutil.DefaultTestConfig()
-	healthHandler := NewHealthHandler(log, mockDB, cfg, "test")
-	handler := NewAuthenticatedHandler(log, mockDB, cfg, "test", healthHandler.GetMetricsHandler())
+	metricsHandler := NewMetricsHandler(log, mockDB, "test")
+	_ = NewHealthHandler(log, mockDB, cfg, "test", metricsHandler)
+	handler := NewAuthenticatedHandler(log, mockDB, cfg, "test", metricsHandler)
 
 	authenticatedAgentID := "019bdeb2-50dc-794e-808b-cf47526b867f"
 	requestedAgentID := "019bdeb2-0000-0000-0000-000000000000"
@@ -88,7 +90,8 @@ func TestCombinedHandler_HealthCheck_NoAuthRequired(t *testing.T) {
 	log := logger.New(logger.Config{Level: "error", Format: "json"})
 	mockDB := testutil.NewMockDatabase()
 	cfg := testutil.DefaultTestConfig()
-	handler := NewHealthHandler(log, mockDB, cfg, "test")
+	metricsHandler := NewMetricsHandler(log, mockDB, "test")
+	handler := NewHealthHandler(log, mockDB, cfg, "test", metricsHandler)
 
 	ctx := context.Background() // No authentication in context
 	request := healthAPI.HealthCheckRequestObject{}
@@ -110,7 +113,8 @@ func TestCombinedHandler_PrometheusMetrics_NoAuthRequired(t *testing.T) {
 	log := logger.New(logger.Config{Level: "error", Format: "json"})
 	mockDB := testutil.NewMockDatabase()
 	cfg := testutil.DefaultTestConfig()
-	healthHandler := NewHealthHandler(log, mockDB, cfg, "test")
+	metricsHandler := NewMetricsHandler(log, mockDB, "test")
+	healthHandler := NewHealthHandler(log, mockDB, cfg, "test", metricsHandler)
 
 	ctx := context.Background() // No authentication in context
 	request := healthAPI.PrometheusMetricsRequestObject{}

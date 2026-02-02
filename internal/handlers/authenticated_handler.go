@@ -13,7 +13,7 @@ import (
 
 // AuthenticatedHandler wraps the CombinedHandler to add authentication checks where needed
 type AuthenticatedHandler struct {
-	*CombinedHandler
+	*APIHandler
 	logger *logger.Logger
 	db     database.Database
 }
@@ -21,9 +21,9 @@ type AuthenticatedHandler struct {
 // NewAuthenticatedHandler creates a new authenticated handler wrapper
 func NewAuthenticatedHandler(logger *logger.Logger, db database.Database, cfg *config.Config, apiVersion string, metricsHandler *metrics.Handler) *AuthenticatedHandler {
 	return &AuthenticatedHandler{
-		CombinedHandler: NewCombinedHandler(logger, db, cfg, apiVersion, metricsHandler),
-		logger:          logger,
-		db:              db,
+		APIHandler: NewAPIHandler(logger, db, cfg, apiVersion, metricsHandler),
+		logger:     logger,
+		db:         db,
 	}
 }
 
@@ -68,5 +68,5 @@ func (h *AuthenticatedHandler) GetAgentConfiguration(ctx context.Context, reques
 	}
 
 	// Authentication successful, delegate to the actual handler
-	return h.CombinedHandler.GetAgentConfiguration(ctx, request)
+	return h.APIHandler.GetAgentConfiguration(ctx, request)
 }

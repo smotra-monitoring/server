@@ -69,8 +69,9 @@ func TestAuthenticatedHandler_Integration(t *testing.T) {
 	}
 
 	cfg := testutil.DefaultTestConfig()
-	healthHandler := NewHealthHandler(log, db, cfg, "test")
-	handler := NewAuthenticatedHandler(log, db, cfg, "test", healthHandler.GetMetricsHandler())
+	metricsHandler := NewMetricsHandler(log, db, "test")
+	healthHandler := NewHealthHandler(log, db, cfg, "test", metricsHandler)
+	handler := NewAuthenticatedHandler(log, db, cfg, "test", metricsHandler)
 
 	// Test 1: Health check works WITHOUT authentication
 	t.Run("HealthCheckNoAuth", func(t *testing.T) {
