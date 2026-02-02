@@ -1,0 +1,20 @@
+package: api_health
+output: internal/api/health/api.gen.go
+# template: go-chi-server
+# options:
+#   generate:
+#     - types
+#     - chi-server
+#     - skip-prune-unused-schemas
+#     - skip-prune-unused-components
+#     - skip-prune-unused-paths
+
+generate:
+  strict-server: true
+  chi-server: true
+  models: true
+  # skip-validation: false
+
+output-options:
+  include-tags:
+  - health

@@ -1,5 +1,5 @@
-package: api
-output: internal/api/api.gen.go
+package: api_v1
+output: internal/api/v1/api.gen.go
 # template: go-chi-server
 # options:
 #   generate:
@@ -17,5 +17,6 @@ generate:
 
 output-options:
   include-tags:
-  - health
   - current
+  exclude-tags:
+  - health

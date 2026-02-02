@@ -3,21 +3,20 @@ package handlers
 import (
 	"context"
 
-	"github.com/smotra-monitoring/server/internal/api"
+	healthAPI "github.com/smotra-monitoring/server/internal/api/health"
+	api "github.com/smotra-monitoring/server/internal/api/v1"
 	"github.com/smotra-monitoring/server/internal/config"
 	"github.com/smotra-monitoring/server/internal/database"
 	"github.com/smotra-monitoring/server/internal/handlers/agent_claim"
 	"github.com/smotra-monitoring/server/internal/handlers/agent_claim_status"
 	"github.com/smotra-monitoring/server/internal/handlers/agent_configuration"
 	"github.com/smotra-monitoring/server/internal/handlers/agent_register"
-	"github.com/smotra-monitoring/server/internal/handlers/health"
 	"github.com/smotra-monitoring/server/internal/handlers/metrics"
 	"github.com/smotra-monitoring/server/internal/logger"
 )
 
 // CombinedHandler combines all handler implementations
 type CombinedHandler struct {
-	health              *health.Handler
 	metrics             *metrics.Handler
 	agent_configuration *agent_configuration.Handler
 	agent_register      *agent_register.Handler
@@ -26,8 +25,7 @@ type CombinedHandler struct {
 }
 
 // NewCombinedHandler creates a new combined handler
-func NewCombinedHandler(logger *logger.Logger, db database.Database, cfg *config.Config, appVersion string) *CombinedHandler {
-	metricsHandler := metrics.NewHandler(logger, db, appVersion)
+func NewCombinedHandler(logger *logger.Logger, db database.Database, cfg *config.Config, appVersion string, metricsHandler *metrics.Handler) *CombinedHandler {
 	configHandler := agent_configuration.NewHandler(logger, db, appVersion)
 	registerHandler := agent_register.NewHandler(logger, db, cfg)
 	claimStatusHandler := agent_claim_status.NewHandler(logger, db)
@@ -43,7 +41,6 @@ func NewCombinedHandler(logger *logger.Logger, db database.Database, cfg *config
 	// Their metrics are exposed through a different mechanism
 
 	return &CombinedHandler{
-		health:              health.NewHandler(logger, db, appVersion),
 		metrics:             metricsHandler,
 		agent_configuration: configHandler,
 		agent_register:      registerHandler,
@@ -52,23 +49,8 @@ func NewCombinedHandler(logger *logger.Logger, db database.Database, cfg *config
 	}
 }
 
-// HealthCheck delegates to health handler
-func (h *CombinedHandler) HealthCheck(ctx context.Context, request api.HealthCheckRequestObject) (api.HealthCheckResponseObject, error) {
-	return h.health.HealthCheck(ctx, request)
-}
-
-// LivenessCheck delegates to health handler
-func (h *CombinedHandler) LivenessCheck(ctx context.Context, request api.LivenessCheckRequestObject) (api.LivenessCheckResponseObject, error) {
-	return h.health.LivenessCheck(ctx, request)
-}
-
-// ReadinessCheck delegates to health handler
-func (h *CombinedHandler) ReadinessCheck(ctx context.Context, request api.ReadinessCheckRequestObject) (api.ReadinessCheckResponseObject, error) {
-	return h.health.ReadinessCheck(ctx, request)
-}
-
 // PrometheusMetrics delegates to metrics handler
-func (h *CombinedHandler) PrometheusMetrics(ctx context.Context, request api.PrometheusMetricsRequestObject) (api.PrometheusMetricsResponseObject, error) {
+func (h *CombinedHandler) PrometheusMetrics(ctx context.Context, request healthAPI.PrometheusMetricsRequestObject) (healthAPI.PrometheusMetricsResponseObject, error) {
 	return h.metrics.PrometheusMetrics(ctx, request)
 }
 
@@ -90,9 +72,4 @@ func (h *CombinedHandler) GetAgentClaimStatus(ctx context.Context, request api.G
 // ClaimAgent delegates to agent claim handler
 func (h *CombinedHandler) ClaimAgent(ctx context.Context, request api.ClaimAgentRequestObject) (api.ClaimAgentResponseObject, error) {
 	return h.agent_claim.Handle(ctx, request)
-}
-
-// SetReady sets the readiness status
-func (h *CombinedHandler) SetReady(ready bool) {
-	h.health.SetReady(ready)
 }

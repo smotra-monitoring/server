@@ -10,7 +10,8 @@ import (
 	"syscall"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/smotra-monitoring/server/internal/api"
+	healthAPI "github.com/smotra-monitoring/server/internal/api/health"
+	api "github.com/smotra-monitoring/server/internal/api/v1"
 	"github.com/smotra-monitoring/server/internal/config"
 	"github.com/smotra-monitoring/server/internal/database"
 	"github.com/smotra-monitoring/server/internal/handlers"
@@ -87,15 +88,23 @@ func main() {
 	r.Use(middleware.AgentAPIKeyAuth(log, db))
 	r.Use(middleware.OAuth2Auth(log))
 
+	// Register Health handler
+	healthHandler := handlers.NewHealthHandler(log, db, cfg, appVersion)
+	healthStrictHandler := healthAPI.NewStrictHandler(healthHandler, nil)
+
+	// Root-level endpoints (no /api/v1 prefix)
+	// These are typically used by monitoring systems and should be at root
+	healthAPI.HandlerFromMux(healthStrictHandler, r)
+
 	// Initialize handlers with authentication wrapper
-	handler := handlers.NewAuthenticatedHandler(log, db, cfg, appVersion)
+	handler := handlers.NewAuthenticatedHandler(log, db, cfg, appVersion, healthHandler.GetMetricsHandler())
 
 	// Register API handler
 	strictHandler := api.NewStrictHandler(handler, nil)
-	api.HandlerFromMux(strictHandler, r)
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
+		api.HandlerFromMux(strictHandler, r)
 		// Future API endpoints will be added here
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -124,7 +133,7 @@ func main() {
 		)
 
 		// Mark server as ready
-		handler.SetReady(true)
+		healthHandler.SetReady(true)
 
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Error("server error", "error", err)
@@ -139,7 +148,7 @@ func main() {
 	log.Info("shutting down the server ...")
 
 	// Mark server as not ready
-	handler.SetReady(false)
+	healthHandler.SetReady(false)
 
 	// Shutdown context with timeout
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)

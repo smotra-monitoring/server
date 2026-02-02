@@ -3,9 +3,10 @@ package handlers
 import (
 	"context"
 
-	"github.com/smotra-monitoring/server/internal/api"
+	api "github.com/smotra-monitoring/server/internal/api/v1"
 	"github.com/smotra-monitoring/server/internal/config"
 	"github.com/smotra-monitoring/server/internal/database"
+	"github.com/smotra-monitoring/server/internal/handlers/metrics"
 	"github.com/smotra-monitoring/server/internal/logger"
 	"github.com/smotra-monitoring/server/internal/middleware"
 )
@@ -18,9 +19,9 @@ type AuthenticatedHandler struct {
 }
 
 // NewAuthenticatedHandler creates a new authenticated handler wrapper
-func NewAuthenticatedHandler(logger *logger.Logger, db database.Database, cfg *config.Config, apiVersion string) *AuthenticatedHandler {
+func NewAuthenticatedHandler(logger *logger.Logger, db database.Database, cfg *config.Config, apiVersion string, metricsHandler *metrics.Handler) *AuthenticatedHandler {
 	return &AuthenticatedHandler{
-		CombinedHandler: NewCombinedHandler(logger, db, cfg, apiVersion),
+		CombinedHandler: NewCombinedHandler(logger, db, cfg, apiVersion, metricsHandler),
 		logger:          logger,
 		db:              db,
 	}
