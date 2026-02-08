@@ -16,7 +16,7 @@ import (
 
 // TestRoutesSeparation verifies that endpoints are registered at the correct paths:
 // - Health/metrics at root level (/, /healthz, /metrics)
-// - API endpoints under /api/v1 prefix
+// - API endpoints under /v1 prefix
 // - No duplicate registrations
 func TestRoutesSeparation(t *testing.T) {
 	log := logger.New(logger.Config{Level: "error", Format: "json"})
@@ -42,10 +42,10 @@ func TestRoutesSeparation(t *testing.T) {
 	healthStrictHandler := healthAPI.NewStrictHandler(healthHandler, nil)
 	healthAPI.HandlerFromMux(healthStrictHandler, r)
 
-	// Register API handler under /api/v1
+	// Register API handler under /v1
 	apiHandler := NewAuthenticatedHandler(log, db, cfg, "test", metricsHandler)
 	apiStrictHandler := api.NewStrictHandler(apiHandler, nil)
-	r.Route("/api/v1", func(r chi.Router) {
+	r.Route("/v1", func(r chi.Router) {
 		api.HandlerFromMux(apiStrictHandler, r)
 	})
 
@@ -84,18 +84,18 @@ func TestRoutesSeparation(t *testing.T) {
 			description:    "Prometheus metrics should be accessible at root level",
 		},
 
-		// Health endpoints should NOT exist under /api/v1
+		// Health endpoints should NOT exist under /v1
 		{
 			name:           "HealthCheck_NotUnderAPIv1",
-			path:           "/api/v1/healthz",
+			path:           "/v1/healthz",
 			expectedStatus: http.StatusNotFound,
-			description:    "Health check should NOT be duplicated under /api/v1",
+			description:    "Health check should NOT be duplicated under /v1",
 		},
 		{
 			name:           "Metrics_NotUnderAPIv1",
-			path:           "/api/v1/metrics",
+			path:           "/v1/metrics",
 			expectedStatus: http.StatusNotFound,
-			description:    "Metrics should NOT be duplicated under /api/v1",
+			description:    "Metrics should NOT be duplicated under /v1",
 		},
 
 		// API endpoints should NOT exist at root level
@@ -112,24 +112,24 @@ func TestRoutesSeparation(t *testing.T) {
 			description:    "Agent claim should NOT be accessible at root level",
 		},
 
-		// API endpoints should work under /api/v1 (with appropriate errors for bad requests)
+		// API endpoints should work under /v1 (with appropriate errors for bad requests)
 		{
 			name:           "AgentRegister_UnderAPIv1",
-			path:           "/api/v1/agent/register",
+			path:           "/v1/agent/register",
 			expectedStatus: http.StatusBadRequest, // Bad request due to missing body, but route exists
-			description:    "Agent register should be accessible under /api/v1",
+			description:    "Agent register should be accessible under /v1",
 		},
 		{
 			name:           "AgentClaim_UnderAPIv1",
-			path:           "/api/v1/agent/claim",
+			path:           "/v1/agent/claim",
 			expectedStatus: http.StatusBadRequest, // Bad request due to missing body, but route exists
-			description:    "Agent claim should be accessible under /api/v1",
+			description:    "Agent claim should be accessible under /v1",
 		},
 
 		// API v1 root endpoint (not implemented as handler, returns 404)
 		{
 			name:           "APIv1_Root",
-			path:           "/api/v1/",
+			path:           "/v1/",
 			expectedStatus: http.StatusNotFound, // Not implemented in strict handler, only in custom route
 			description:    "API v1 root returns 404 from strict handler",
 		},
@@ -144,8 +144,8 @@ func TestRoutesSeparation(t *testing.T) {
 
 			// For GET-only endpoints, use GET method
 			if tt.path == "/healthz" || tt.path == "/healthz/ready" || tt.path == "/healthz/live" ||
-				tt.path == "/metrics" || tt.path == "/api/v1/" ||
-				tt.path == "/api/v1/healthz" || tt.path == "/api/v1/metrics" {
+				tt.path == "/metrics" || tt.path == "/v1/" ||
+				tt.path == "/v1/healthz" || tt.path == "/v1/metrics" {
 				req.Method = http.MethodGet
 			}
 
@@ -185,7 +185,7 @@ func TestRouteSeparation_NoConflicts(t *testing.T) {
 
 	apiHandler := NewAuthenticatedHandler(log, db, cfg, "test", metricsHandler)
 	apiStrictHandler := api.NewStrictHandler(apiHandler, nil)
-	r.Route("/api/v1", func(r chi.Router) {
+	r.Route("/v1", func(r chi.Router) {
 		api.HandlerFromMux(apiStrictHandler, r)
 	})
 
@@ -207,7 +207,7 @@ func TestRouteSeparation_NoConflicts(t *testing.T) {
 		}
 
 		// API endpoint (will fail due to missing body, but route exists)
-		apiReq, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, testServer.URL+"/api/v1/agent/register", nil)
+		apiReq, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, testServer.URL+"/v1/agent/register", nil)
 		apiResp, err := http.DefaultClient.Do(apiReq)
 		if err != nil {
 			t.Fatalf("API request failed: %v", err)
@@ -256,7 +256,7 @@ func TestHealthEndpoints_OnlyAtRoot(t *testing.T) {
 		})
 
 		t.Run("APIv1_"+path, func(t *testing.T) {
-			req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, testServer.URL+"/api/v1"+path, nil)
+			req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, testServer.URL+"/v1"+path, nil)
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
 				t.Fatalf("Request failed: %v", err)
@@ -264,7 +264,7 @@ func TestHealthEndpoints_OnlyAtRoot(t *testing.T) {
 			defer resp.Body.Close()
 
 			if resp.StatusCode != http.StatusNotFound {
-				t.Errorf("%s under /api/v1: expected 404, got %d (should not be duplicated)", path, resp.StatusCode)
+				t.Errorf("%s under /v1: expected 404, got %d (should not be duplicated)", path, resp.StatusCode)
 			}
 		})
 	}

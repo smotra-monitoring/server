@@ -1,6 +1,6 @@
 package handlers
 
-// api_handlers.go contains handlers for versioned API endpoints (/api/v1/*)
+// api_handlers.go contains handlers for versioned API endpoints (/v1/*)
 // that represent the core business logic of the monitoring system.
 //
 // These endpoints include:
@@ -12,10 +12,10 @@ package handlers
 //
 // The handlers are generated from OpenAPI spec using tag filtering
 // (include-tags: current, exclude-tags: health) and registered under
-// the /api/v1 route group.
+// the /v1 route group.
 //
 // This separation allows:
-// - Clean API versioning (future /api/v2 won't conflict with health endpoints)
+// - Clean API versioning (future /v2 won't conflict with health endpoints)
 // - Different authentication requirements per endpoint group
 // - Independent evolution of monitoring vs business endpoints
 

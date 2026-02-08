@@ -99,7 +99,7 @@ func main() {
 	// Initialize handlers with authentication wrapper
 	apiHandler := handlers.NewAuthenticatedHandler(log, db, cfg, appVersion, metricsHandler)
 	apiStrictHandler := api.NewStrictHandler(apiHandler, nil)
-	r.Route("/api/v1", func(r chi.Router) {
+	r.Route("/v1", func(r chi.Router) {
 		api.HandlerFromMux(apiStrictHandler, r)
 
 		// Future API endpoints will be added here

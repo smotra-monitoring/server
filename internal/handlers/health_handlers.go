@@ -10,7 +10,7 @@ package handlers
 // - Monitoring systems
 //
 // The handlers are generated from OpenAPI spec using tag filtering (include-tags: health)
-// and registered at the root level of the router, not under /api/v1.
+// and registered at the root level of the router, not under /v1.
 
 import (
 	"context"

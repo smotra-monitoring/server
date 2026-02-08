@@ -48,7 +48,7 @@ curl http://localhost:8080/healthz/ready
 curl http://localhost:8080/healthz/live
 
 # API info
-curl http://localhost:8080/api/v1
+curl http://localhost:8080/v1
 ```
 
 ### 4. Agent Claiming Workflow
@@ -398,12 +398,12 @@ server/
 
 ### API
 - **OpenAPI 3.0**: API specification maintained in separate [smotra-monitoring/openapi](https://github.com/smotra-monitoring/openapi) repository
-- **Dual Router Architecture**: Separates monitoring endpoints (root) from business logic (`/api/v1`)
+- **Dual Router Architecture**: Separates monitoring endpoints (root) from business logic (`/v1`)
   - **Root Endpoints**: `/healthz`, `/metrics` - No versioning, infrastructure monitoring
-  - **Versioned Endpoints**: `/api/v1/*` - Core business logic with API versioning
+  - **Versioned Endpoints**: `/v1/*` - Core business logic with API versioning
 - **Tag-Based Code Generation**: Two oapi-codegen configs generate separate packages:
   - `api/oapi-codegen-root.yaml` → `internal/api/health/` (health tag)
-  - `api/oapi-codegen-prefixed.yaml` → `internal/api/v1/` (current tag, excludes health)
+  - `api/oapi-codegen-prefixed.yaml` → `internal/v1/` (current tag, excludes health)
 - **Strict Handlers**: Uses OpenAPI strict handler pattern for type safety
 - **Authentication**: Agent API key authentication via `X-Agent-API-Key` header
 - **Future-Proof**: Clean separation allows adding `/api/v2` without conflicts
@@ -459,13 +459,13 @@ just generate-oapi
 # Root-level endpoints (/healthz, /metrics)
 oapi-codegen -config=api/oapi-codegen-root.yaml api/openapi/api/spec.yaml
 
-# Versioned API endpoints (/api/v1/*)
+# Versioned API endpoints (/v1/*)
 oapi-codegen -config=api/oapi-codegen-prefixed.yaml api/openapi/api/spec.yaml
 ```
 
 **Generated Packages:**
 - `internal/api/health/api.gen.go` - Health and metrics handlers (root level)
-- `internal/api/v1/api.gen.go` - Versioned API handlers (/api/v1)
+- `internal/v1/api.gen.go` - Versioned API handlers (/v1)
 
 **Tag Strategy:**
 - Endpoints tagged with `health` → root level package
@@ -597,7 +597,7 @@ go mod download
 - `GET /metrics` - Prometheus metrics endpoint exposing server and application metrics
 
 ### API v1
-- `GET /api/v1` - API version information
+- `GET /v1` - API version information
 
 ### Agent Configuration
 - `GET /agent/{agentId}/configuration` - Retrieve agent-specific configuration including monitoring settings, endpoints, and tags (requires `X-Agent-API-Key` header)

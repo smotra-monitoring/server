@@ -61,17 +61,17 @@ func TestExtractAgentIDFromPath(t *testing.T) {
 		},
 		{
 			name:     "valid path with api prefix",
-			path:     "/api/v1/agent/019bdeb2-50dc-794e-808b-cf47526b867f/configuration",
+			path:     "/v1/agent/019bdeb2-50dc-794e-808b-cf47526b867f/configuration",
 			expected: "019bdeb2-50dc-794e-808b-cf47526b867f",
 		},
 		{
 			name:     "no agent in path",
-			path:     "/api/v1/health",
+			path:     "/v1/health",
 			expected: "",
 		},
 		{
 			name:     "agent at end of path",
-			path:     "/api/v1/agent",
+			path:     "/v1/agent",
 			expected: "",
 		},
 		{
@@ -136,7 +136,7 @@ func TestAgentAPIKeyAuth_WithAPIKeyButNoAgentInPath(t *testing.T) {
 		w.Write([]byte("OK"))
 	})
 
-	req := httptest.NewRequest("GET", "/api/v1/health", nil)
+	req := httptest.NewRequest("GET", "/v1/health", nil)
 	req.Header.Set("X-Agent-API-Key", "test-key")
 	w := httptest.NewRecorder()
 
