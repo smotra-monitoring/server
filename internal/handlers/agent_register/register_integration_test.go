@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -113,6 +114,10 @@ func TestRegisterAgentSelf_Integration_Success(t *testing.T) {
 
 	if response.PollUrl == "" {
 		t.Error("Expected non-empty poll URL")
+	}
+
+	if strings.Contains(response.ClaimUrl, "/agents/") {
+		t.Errorf("Expected claim URL to not contain '/agents/', got '%s'", response.ClaimUrl)
 	}
 
 	// Verify database entry
