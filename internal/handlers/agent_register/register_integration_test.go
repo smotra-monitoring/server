@@ -116,8 +116,8 @@ func TestRegisterAgentSelf_Integration_Success(t *testing.T) {
 		t.Error("Expected non-empty poll URL")
 	}
 
-	if strings.Contains(response.ClaimUrl, "/agents/") {
-		t.Errorf("Expected claim URL to not contain '/agents/', got '%s'", response.ClaimUrl)
+	if !strings.Contains(response.PollUrl, "/agent/") {
+		t.Errorf("Expected poll URL to contain '/agent/', got '%s'", response.PollUrl)
 	}
 
 	// Verify database entry
