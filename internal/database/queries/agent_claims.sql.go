@@ -25,7 +25,7 @@ func (q *Queries) CleanupDeliveredClaims(ctx context.Context) error {
 
 const cleanupExpiredClaims = `-- name: CleanupExpiredClaims :exec
 DELETE FROM agent_claims 
-WHERE claim_token_expires_at < strftime('%Y-%m-%d %H:%M:%S', 'now')
+WHERE claim_token_expires_at < datetime('now')
 `
 
 func (q *Queries) CleanupExpiredClaims(ctx context.Context) error {
@@ -93,7 +93,7 @@ const getAgentClaimForClaiming = `-- name: GetAgentClaimForClaiming :one
 SELECT id, claim_token_hash, hostname, agent_version, claim_token_expires_at, last_seen_at, created_at, claimed_at, claimed_by_user_id, api_key_plaintext, api_key_delivered FROM agent_claims
 WHERE id = ?
   AND claim_token_hash = ?
-  AND claim_token_expires_at > strftime('%Y-%m-%d %H:%M:%S', 'now')
+  AND claim_token_expires_at > datetime('now')
   AND claimed_at IS NULL
 LIMIT 1
 `
@@ -196,7 +196,7 @@ const listUnclaimedAgents = `-- name: ListUnclaimedAgents :many
 
 SELECT id, claim_token_hash, hostname, agent_version, claim_token_expires_at, last_seen_at, created_at, claimed_at, claimed_by_user_id, api_key_plaintext, api_key_delivered FROM agent_claims
 WHERE claimed_at IS NULL
-  AND claim_token_expires_at > strftime('%Y-%m-%d %H:%M:%S', 'now')
+  AND claim_token_expires_at > datetime('now')
 ORDER BY created_at DESC
 `
 
@@ -250,7 +250,7 @@ func (q *Queries) MarkAgentClaimAPIKeyDelivered(ctx context.Context, id string) 
 
 const markAgentClaimClaimed = `-- name: MarkAgentClaimClaimed :exec
 UPDATE agent_claims
-SET claimed_at = strftime('%Y-%m-%d %H:%M:%S', 'now'),
+SET claimed_at = datetime('now'),
     claimed_by_user_id = ?,
     api_key_plaintext = ?
 WHERE id = ?
@@ -275,9 +275,9 @@ INSERT INTO agent_claims (
     agent_version,
     claim_token_expires_at,
     last_seen_at
-) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%d %H:%M:%S', 'now'))
+) VALUES (?, ?, ?, ?, ?, datetime('now'))
 ON CONFLICT(id) DO UPDATE SET
-    last_seen_at = strftime('%Y-%m-%d %H:%M:%S', 'now'),
+    last_seen_at = datetime('now'),
     hostname = COALESCE(excluded.hostname, hostname),
     agent_version = COALESCE(excluded.agent_version, agent_version)
 WHERE claimed_at IS NULL  -- Only update if not yet claimed
