@@ -138,7 +138,7 @@ LIMIT 1
 
 type GetPendingAPIKeyDeliveryRow struct {
 	ID              string
-	ClaimedAt       sql.NullString
+	ClaimedAt       sql.NullTime
 	ApiKeyPlaintext sql.NullString
 }
 
