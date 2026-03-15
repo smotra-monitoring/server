@@ -76,7 +76,8 @@ func (h *Handler) Handle(ctx context.Context, req api.GetAgentClaimStatusRequest
 		h.pollPendingTotal.Add(1)
 
 		pending := api.ClaimStatusPending{
-			Status: "pending_claim",
+			Status:    "pending_claim",
+			ExpiresAt: claim.ClaimTokenExpiresAt,
 		}
 
 		return newClaimStatus200Response(pending)
@@ -92,7 +93,8 @@ func (h *Handler) Handle(ctx context.Context, req api.GetAgentClaimStatusRequest
 		// API key already delivered, return pending status
 		// (agent should stop polling after receiving the key once)
 		pending := api.ClaimStatusPending{
-			Status: "pending_claim",
+			Status:    "pending_claim",
+			ExpiresAt: claim.ClaimTokenExpiresAt,
 		}
 		return newClaimStatus200Response(pending)
 	}

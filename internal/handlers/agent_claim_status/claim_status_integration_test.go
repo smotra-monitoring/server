@@ -137,6 +137,23 @@ func TestGetAgentClaimStatus_Integration_PendingClaim(t *testing.T) {
 	if _, ok := response["api_key"]; ok {
 		t.Error("Expected no api_key in pending response")
 	}
+
+	// Verify expiresAt field is present
+	if expiresAtStr, ok := response["expiresAt"].(string); !ok || expiresAtStr == "" {
+		t.Errorf("Expected expiresAt to be present, got %v", response["expiresAt"])
+	} else {
+		// Parse the time to verify it's valid RFC3339
+		parsedTime, err := time.Parse(time.RFC3339, expiresAtStr)
+		if err != nil {
+			t.Errorf("expiresAt is not valid RFC3339: %v", err)
+		}
+
+		// Verify the time is in the future (within reasonable bounds)
+		timeDiff := parsedTime.Sub(expiresAt)
+		if timeDiff > time.Second || timeDiff < -time.Second {
+			t.Errorf("expiresAt time mismatch: expected %v, got %v (diff: %v)", expiresAt, parsedTime, timeDiff)
+		}
+	}
 }
 
 func TestGetAgentClaimStatus_Integration_AlreadyDelivered1(t *testing.T) {

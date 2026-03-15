@@ -1,8 +1,10 @@
 package agent_claim_status
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	api "github.com/smotra-monitoring/server/internal/api/v1"
 	"github.com/smotra-monitoring/server/internal/logger"
@@ -68,6 +70,57 @@ func TestNewClaimStatus200Response_Pending(t *testing.T) {
 	// Verify the response implements the correct interface
 	if response == nil {
 		t.Error("newClaimStatus200Response returned nil")
+	}
+}
+
+func TestNewClaimStatus200Response_PendingWithExpiresAt(t *testing.T) {
+	expiresAt := time.Now().Add(24 * time.Hour).UTC()
+
+	pending := api.ClaimStatusPending{
+		Status:    "pending_claim",
+		ExpiresAt: expiresAt,
+	}
+
+	response, err := newClaimStatus200Response(pending)
+	if err != nil {
+		t.Fatalf("newClaimStatus200Response failed: %v", err)
+	}
+
+	if response == nil {
+		t.Fatal("newClaimStatus200Response returned nil")
+	}
+
+	// Extract the JSON data to verify it contains expiresAt
+	respData, ok := response.(*claimStatusResponse)
+	if !ok {
+		t.Fatal("response is not of type *claimStatusResponse")
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(respData.data, &result); err != nil {
+		t.Fatalf("Failed to unmarshal response data: %v", err)
+	}
+
+	// Verify status field
+	if status, ok := result["status"].(string); !ok || status != "pending_claim" {
+		t.Errorf("Expected status 'pending_claim', got %v", result["status"])
+	}
+
+	// Verify expiresAt field exists and is not empty
+	if expiresAtStr, ok := result["expiresAt"].(string); !ok || expiresAtStr == "" {
+		t.Errorf("Expected expiresAt to be present, got %v", result["expiresAt"])
+	} else {
+		// Parse the time to verify it's valid RFC3339
+		parsedTime, err := time.Parse(time.RFC3339, expiresAtStr)
+		if err != nil {
+			t.Errorf("expiresAt is not valid RFC3339: %v", err)
+		}
+
+		// Verify the time matches (allow 1 second difference due to serialization)
+		timeDiff := parsedTime.Sub(expiresAt)
+		if timeDiff > time.Second || timeDiff < -time.Second {
+			t.Errorf("expiresAt time mismatch: expected %v, got %v", expiresAt, parsedTime)
+		}
 	}
 }
 
