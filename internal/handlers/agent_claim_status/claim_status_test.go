@@ -14,8 +14,9 @@ import (
 func TestNewHandler(t *testing.T) {
 	log := logger.Default()
 	db := testutil.NewMockDatabase()
+	cfg := testutil.DefaultTestConfig()
 
-	handler := NewHandler(log, db)
+	handler := NewHandler(log, db, cfg)
 
 	if handler == nil {
 		t.Fatal("NewHandler returned nil")
@@ -33,8 +34,9 @@ func TestNewHandler(t *testing.T) {
 func TestHandler_GetMetrics(t *testing.T) {
 	log := logger.Default()
 	db := testutil.NewMockDatabase()
+	cfg := testutil.DefaultTestConfig()
 
-	handler := NewHandler(log, db)
+	handler := NewHandler(log, db, cfg)
 	metrics := handler.GetMetrics()
 
 	if metrics == "" {
@@ -121,6 +123,102 @@ func TestNewClaimStatus200Response_PendingWithExpiresAt(t *testing.T) {
 		if timeDiff > time.Second || timeDiff < -time.Second {
 			t.Errorf("expiresAt time mismatch: expected %v, got %v", expiresAt, parsedTime)
 		}
+	}
+}
+
+func TestCalculatePollIn_LinearBackoff(t *testing.T) {
+	log := logger.Default()
+	db := testutil.NewMockDatabase()
+	cfg := testutil.DefaultTestConfig()
+
+	handler := NewHandler(log, db, cfg)
+
+	tests := []struct {
+		name      string
+		pollCount int64
+		expected  int32
+	}{
+		{
+			name:      "First poll (count=0)",
+			pollCount: 0,
+			expected:  5, // initial interval
+		},
+		{
+			name:      "Second poll (count=1)",
+			pollCount: 1,
+			expected:  10, // 5 + (1 × 5)
+		},
+		{
+			name:      "Third poll (count=2)",
+			pollCount: 2,
+			expected:  15, // 5 + (2 × 5)
+		},
+		{
+			name:      "Fourth poll (count=3)",
+			pollCount: 3,
+			expected:  20, // 5 + (3 × 5)
+		},
+		{
+			name:      "Many polls - should cap at max",
+			pollCount: 100,
+			expected:  30, // max interval (not 505)
+		},
+		{
+			name:      "Exactly at max threshold",
+			pollCount: 59, // 5 + (59 × 5) = 300
+			expected:  30, // max interval (not 300)
+		},
+		{
+			name:      "One before max threshold",
+			pollCount: 58, // 5 + (58 × 5) = 295
+			expected:  30, // max interval (not 295)
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := handler.calculatePollIn(tt.pollCount)
+			if result != tt.expected {
+				t.Errorf("calculatePollIn(%d) = %d, expected %d", tt.pollCount, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestNewClaimStatus200Response_PendingWithPollIn(t *testing.T) {
+	expiresAt := time.Now().Add(24 * time.Hour).UTC()
+
+	pending := api.ClaimStatusPending{
+		Status:    "pending_claim",
+		ExpiresAt: expiresAt,
+		PollIn:    30,
+	}
+
+	response, err := newClaimStatus200Response(pending)
+	if err != nil {
+		t.Fatalf("newClaimStatus200Response failed: %v", err)
+	}
+
+	if response == nil {
+		t.Fatal("newClaimStatus200Response returned nil")
+	}
+
+	// Extract the JSON data to verify it contains pollIn
+	respData, ok := response.(*claimStatusResponse)
+	if !ok {
+		t.Fatal("response is not of type *claimStatusResponse")
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(respData.data, &result); err != nil {
+		t.Fatalf("Failed to unmarshal response data: %v", err)
+	}
+
+	// Verify pollIn field
+	if pollIn, ok := result["pollIn"].(float64); !ok {
+		t.Errorf("Expected pollIn to be present as number, got %v (type %T)", result["pollIn"], result["pollIn"])
+	} else if int32(pollIn) != 30 {
+		t.Errorf("Expected pollIn to be 30, got %v", pollIn)
 	}
 }
 
