@@ -141,24 +141,16 @@ func (h *Handler) Handle(ctx context.Context, req api.PostClaimAgentRequestObjec
 	// For now, we'll use a placeholder or nil
 	var userID sql.NullString // Will be populated from JWT/OAuth2 context
 
-	// Determine agent name - use hostname from claim
+	// Determine agent name - use hostname from claim unless overridden
 	agentName := claimFromDB.Hostname
 	if req.Body.Name != nil && *req.Body.Name != "" {
 		agentName = *req.Body.Name
 	}
 
-	// Create agent in production table
-	_, err = q.CreateAgentFromClaim(ctx, queries.CreateAgentFromClaimParams{
-		ID:           agentIDStr,
-		SectionID:    req.Body.SectionId.String(),
-		Name:         agentName,
-		ApiKeyHash:   apiKeyHash,
-		BaseConfig:   "{}", // Default empty config
-		AgentVersion: sql.NullString{String: claimFromDB.AgentVersion, Valid: true},
-	})
-
+	// Create agent and mark claim atomically
+	tx, err := h.db.DB().BeginTx(ctx, nil)
 	if err != nil {
-		h.logger.ErrorContext(ctx, "Failed to create agent",
+		h.logger.ErrorContext(ctx, "Failed to begin transaction",
 			slog.String("agentId", agentIDStr),
 			slog.String("error", err.Error()),
 		)
@@ -166,24 +158,69 @@ func (h *Handler) Handle(ctx context.Context, req api.PostClaimAgentRequestObjec
 		return api.PostClaimAgent500JSONResponse{
 			InternalServerErrorJSONResponse: api.InternalServerErrorJSONResponse{
 				Error:   "internal_error",
-				Message: "Failed to create agent",
+				Message: "Failed to claim agent",
+			},
+		}, nil
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	txQueries := q.WithTx(tx)
+
+	if _, err = txQueries.CreateAgentFromClaim(ctx, queries.CreateAgentFromClaimParams{
+		ID:           agentIDStr,
+		SectionID:    req.Body.SectionId.String(),
+		Name:         agentName,
+		ApiKeyHash:   apiKeyHash,
+		BaseConfig:   "{}",
+		AgentVersion: sql.NullString{String: claimFromDB.AgentVersion, Valid: true},
+	}); err != nil {
+		h.logger.ErrorContext(ctx, "Failed to create agent from claim",
+			slog.String("agentId", agentIDStr),
+			slog.String("error", err.Error()),
+		)
+		h.claimFailureTotal.Add(1)
+		return api.PostClaimAgent500JSONResponse{
+			InternalServerErrorJSONResponse: api.InternalServerErrorJSONResponse{
+				Error:   "internal_error",
+				Message: "Failed to claim agent",
 			},
 		}, nil
 	}
 
-	// Mark claim as claimed and store API key for delivery
-	err = q.MarkAgentClaimClaimed(ctx, queries.MarkAgentClaimClaimedParams{
+	if err = txQueries.MarkAgentClaimClaimed(ctx, queries.MarkAgentClaimClaimedParams{
 		ClaimedByUserID: userID,
 		ApiKeyPlaintext: sql.NullString{String: apiKey, Valid: true},
 		ID:              agentIDStr,
-	})
-
-	if err != nil {
+	}); err != nil {
 		h.logger.ErrorContext(ctx, "Failed to mark claim as claimed",
 			slog.String("agentId", agentIDStr),
 			slog.String("error", err.Error()),
 		)
-		// Don't fail the request - agent was created successfully
+		h.claimFailureTotal.Add(1)
+		return api.PostClaimAgent500JSONResponse{
+			InternalServerErrorJSONResponse: api.InternalServerErrorJSONResponse{
+				Error:   "internal_error",
+				Message: "Failed to claim agent",
+			},
+		}, nil
+	}
+
+	if err = tx.Commit(); err != nil {
+		h.logger.ErrorContext(ctx, "Failed to commit transaction",
+			slog.String("agentId", agentIDStr),
+			slog.String("error", err.Error()),
+		)
+		h.claimFailureTotal.Add(1)
+		return api.PostClaimAgent500JSONResponse{
+			InternalServerErrorJSONResponse: api.InternalServerErrorJSONResponse{
+				Error:   "internal_error",
+				Message: "Failed to claim agent",
+			},
+		}, nil
 	}
 
 	h.claimSuccessTotal.Add(1)
