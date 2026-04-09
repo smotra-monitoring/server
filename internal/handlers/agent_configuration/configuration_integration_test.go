@@ -37,6 +37,10 @@ func (t *testServerImpl) PostClaimAgent(ctx context.Context, request api.PostCla
 	return nil, nil
 }
 
+func (t *testServerImpl) SubmitAgentResults(ctx context.Context, request api.SubmitAgentResultsRequestObject) (api.SubmitAgentResultsResponseObject, error) {
+	return nil, nil
+}
+
 func setupTestRouter(handler *Handler) *chi.Mux {
 	testImpl := &testServerImpl{Handler: handler}
 	r := chi.NewRouter()

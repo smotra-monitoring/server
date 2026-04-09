@@ -34,6 +34,15 @@
   - [x] Unit tests for all claiming handlers (23 tests)
   - [x] Integration tests for complete workflow (13 tests)
 - [x] Agent registration and management (Server side)
+- [x] Monitoring results submission endpoint (POST /agent/{agentId}/results)
+  - [x] Batch ingestion with client-assigned UUIDv7 IDs for idempotent dedup
+  - [x] Support for ping, httpget, tcpconnect, udpconnect, traceroute, plugin check types
+  - [x] Separate `traceroute_hops` table for per-hop analytics
+  - [x] Nullable endpoint FK resolved at insert time by agent+address lookup
+  - [x] `last_seen_at` updated on agent after each accepted batch
+  - [x] Prometheus metrics for submission attempts, success, failure, accepted, duplicates
+  - [x] Authentication: agent must authenticate with matching agent ID
+  - [x] Unit tests (6) and integration tests (6)
 
 ### Current Work
 - [ ] Web UI for agent claiming workflow

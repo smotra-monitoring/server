@@ -113,11 +113,6 @@ func (h *Handler) GetAgentConfiguration(ctx context.Context, request api.GetAgen
 			return nil, fmt.Errorf("failed to get endpoint tags: %w", err)
 		}
 
-		var endpointTagsPtr *[]string
-		if len(endpointTags) > 0 {
-			endpointTagsPtr = &endpointTags
-		}
-
 		// Convert enabled from sql.NullInt64 to bool
 		enabled := endpointRow.Enabled != 0
 
@@ -133,7 +128,7 @@ func (h *Handler) GetAgentConfiguration(ctx context.Context, request api.GetAgen
 			Address: endpointRow.Address,
 			Port:    portPtr,
 			Enabled: enabled,
-			Tags:    *endpointTagsPtr,
+			Tags:    endpointTags,
 		}
 		endpoints = append(endpoints, endpoint)
 	}
