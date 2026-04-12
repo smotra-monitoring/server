@@ -637,7 +637,7 @@ Content-Type: application/json
       "id": "019d6abc-0000-7000-8000-000000000001",
       "agent_id": "<agentId>",
       "timestamp": "2026-04-08T10:00:00Z",
-      "target": { "address": "8.8.8.8", "tags": [] },
+      "target": { "address": "dns.google", "tags": [] },
       "check_type": {
         "type": "ping",
         "result": {
