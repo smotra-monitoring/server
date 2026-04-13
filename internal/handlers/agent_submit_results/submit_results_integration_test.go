@@ -125,6 +125,14 @@ func TestIntegration_PingBatch_Accepted(t *testing.T) {
 	db, agentID := setupRealDB(t)
 	h := NewHandler(logger.Default(), db)
 	router := setupTestRouter(h)
+	ctx := context.Background()
+
+	endpointID := uuid.Must(uuid.NewV7()).String()
+	if _, err := db.DB().ExecContext(ctx,
+		`INSERT INTO endpoints (id, agent_id, address, enabled) VALUES (?, ?, ?, 1)`,
+		endpointID, agentID.String(), "8.8.8.8"); err != nil {
+		t.Fatalf("insert endpoint: %v", err)
+	}
 
 	result := api.MonitoringResult{
 		Id:        uuid.Must(uuid.NewV7()),
@@ -171,12 +179,20 @@ func TestIntegration_Deduplication(t *testing.T) {
 	db, agentID := setupRealDB(t)
 	h := NewHandler(logger.Default(), db)
 	router := setupTestRouter(h)
+	ctx := context.Background()
+
+	endpointID := uuid.Must(uuid.NewV7()).String()
+	if _, err := db.DB().ExecContext(ctx,
+		`INSERT INTO endpoints (id, agent_id, address, enabled) VALUES (?, ?, ?, 1)`,
+		endpointID, agentID.String(), "1.1.1.1"); err != nil {
+		t.Fatalf("insert endpoint: %v", err)
+	}
 
 	result := api.MonitoringResult{
 		Id:        uuid.Must(uuid.NewV7()),
 		AgentId:   agentID,
-		CheckType: pingCheckType(t, "1.2.3.4", 3, 1),
-		Target:    api.Endpoint{Address: "1.2.3.4", Tags: []string{}},
+		CheckType: pingCheckType(t, "1.1.1.1", 3, 1),
+		Target:    api.Endpoint{Address: "1.1.1.1", Tags: []string{}},
 		Timestamp: time.Now().UTC(),
 	}
 
@@ -213,8 +229,17 @@ func TestIntegration_UpdatesLastSeenAt(t *testing.T) {
 	db, agentID := setupRealDB(t)
 	h := NewHandler(logger.Default(), db)
 	router := setupTestRouter(h)
+	ctx := context.Background()
 
-	before := time.Now().UTC().Add(-time.Second)
+	endpointID := uuid.Must(uuid.NewV7()).String()
+	if _, err := db.DB().ExecContext(ctx,
+		`INSERT INTO endpoints (id, agent_id, address, enabled) VALUES (?, ?, ?, 1)`,
+		endpointID, agentID.String(), "9.9.9.9"); err != nil {
+		t.Fatalf("insert endpoint: %v", err)
+	}
+
+	start := time.Now().UTC().Add(-time.Second)
+	finish := start.Add(2 * time.Second)
 	result := api.MonitoringResult{
 		Id:        uuid.Must(uuid.NewV7()),
 		AgentId:   agentID,
@@ -234,8 +259,11 @@ func TestIntegration_UpdatesLastSeenAt(t *testing.T) {
 	if !lastSeen.Valid {
 		t.Fatal("last_seen_at should be set")
 	}
-	if lastSeen.Time.Before(before) {
-		t.Errorf("last_seen_at %v before submission time %v", lastSeen.Time, before)
+	if lastSeen.Time.Before(start) {
+		t.Errorf("last_seen_at %v before submission time %v", lastSeen.Time, start)
+	}
+	if lastSeen.Time.After(finish) {
+		t.Errorf("last_seen_at %v after expected finish time %v", lastSeen.Time, finish)
 	}
 }
 
@@ -330,6 +358,14 @@ func TestIntegration_MixedTypeBatch(t *testing.T) {
 	db, agentID := setupRealDB(t)
 	h := NewHandler(logger.Default(), db)
 	router := setupTestRouter(h)
+	ctx := context.Background()
+
+	endpointID := uuid.Must(uuid.NewV7()).String()
+	if _, err := db.DB().ExecContext(ctx,
+		`INSERT INTO endpoints (id, agent_id, address, enabled) VALUES (?, ?, ?, 1)`,
+		endpointID, agentID.String(), "8.8.8.8"); err != nil {
+		t.Fatalf("insert endpoint: %v", err)
+	}
 
 	results := []api.MonitoringResult{
 		{
