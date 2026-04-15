@@ -317,8 +317,8 @@ func TestIntegration_TracerouteHopsStored(t *testing.T) {
 	hop1addr := "192.168.1.1"
 	hop2addr := "10.0.0.1"
 	hops := []api.TracerouteHop{
-		{Hop: 1, Address: &hop1addr, SuccessLatencies: &[]float64{1.0, 1.1, 1.2}},
-		{Hop: 2, Address: &hop2addr, SuccessLatencies: &[]float64{5.6}},
+		{Hop: 1, ResolvedIp: &hop1addr, SuccessLatencies: &[]float64{1.0, 1.1, 1.2}},
+		{Hop: 2, ResolvedIp: &hop2addr, SuccessLatencies: &[]float64{5.6}},
 	}
 	result := api.MonitoringResult{
 		Id:         uuid.Must(uuid.NewV7()),
@@ -334,7 +334,7 @@ func TestIntegration_TracerouteHopsStored(t *testing.T) {
 	}
 
 	rows, err := db.DB().QueryContext(context.Background(),
-		`SELECT hop, address FROM check_results_traceroute_hops WHERE check_id = ? ORDER BY hop`, result.Id.String())
+		`SELECT hop, resolved_ip FROM check_results_traceroute_hops WHERE check_id = ? ORDER BY hop`, result.Id.String())
 	if err != nil {
 		t.Fatalf("query check_results_traceroute_hops: %v", err)
 	}

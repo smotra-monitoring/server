@@ -212,7 +212,7 @@ INSERT INTO check_results_traceroute_hops (
     id,
     check_id,
     hop,
-    address,
+    resolved_ip,
     hostname,
     success_latencies_json
 ) VALUES (?, ?, ?, ?, ?, ?)
@@ -222,7 +222,7 @@ type InsertTracerouteHopParams struct {
 	ID                   string
 	CheckID              string
 	Hop                  int64
-	Address              sql.NullString
+	ResolvedIp           sql.NullString
 	Hostname             sql.NullString
 	SuccessLatenciesJson string
 }
@@ -232,7 +232,7 @@ func (q *Queries) InsertTracerouteHop(ctx context.Context, arg InsertTracerouteH
 		arg.ID,
 		arg.CheckID,
 		arg.Hop,
-		arg.Address,
+		arg.ResolvedIp,
 		arg.Hostname,
 		arg.SuccessLatenciesJson,
 	)

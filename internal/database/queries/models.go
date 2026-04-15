@@ -99,7 +99,7 @@ type CheckResultsTracerouteHop struct {
 	ID                   string
 	CheckID              string
 	Hop                  int64
-	Address              sql.NullString
+	ResolvedIp           sql.NullString
 	Hostname             sql.NullString
 	SuccessLatenciesJson string
 }

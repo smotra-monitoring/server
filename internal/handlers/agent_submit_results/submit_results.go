@@ -449,9 +449,9 @@ func (h *Handler) insertTypeSpecificResult(ctx context.Context, q *queries.Queri
 				ID:      hopID.String(),
 				CheckID: resultID,
 				Hop:     int64(hop.Hop),
-				Address: sql.NullString{
-					String: ptrStringVal(hop.Address),
-					Valid:  hop.Address != nil,
+				ResolvedIp: sql.NullString{
+					String: ptrStringVal(hop.ResolvedIp),
+					Valid:  hop.ResolvedIp != nil,
 				},
 				Hostname: sql.NullString{
 					String: ptrStringVal(hop.Hostname),

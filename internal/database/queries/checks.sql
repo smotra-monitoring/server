@@ -62,7 +62,7 @@ INSERT INTO check_results_traceroute_hops (
     id,
     check_id,
     hop,
-    address,
+    resolved_ip,
     hostname,
     success_latencies_json
 ) VALUES (?, ?, ?, ?, ?, ?);
