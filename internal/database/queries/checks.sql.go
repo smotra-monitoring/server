@@ -54,7 +54,7 @@ func (q *Queries) InsertCheckResult(ctx context.Context, arg InsertCheckResultPa
 }
 
 const insertHttpGetCheckResult = `-- name: InsertHttpGetCheckResult :exec
-INSERT INTO http_get_check_results (
+INSERT INTO check_results_http_get (
     check_id,
     status_code,
     response_time_ms,
@@ -83,7 +83,7 @@ func (q *Queries) InsertHttpGetCheckResult(ctx context.Context, arg InsertHttpGe
 }
 
 const insertPingCheckResult = `-- name: InsertPingCheckResult :exec
-INSERT INTO ping_check_results (
+INSERT INTO check_results_ping (
     check_id,
     resolved_ip,
     successes,
@@ -118,7 +118,7 @@ func (q *Queries) InsertPingCheckResult(ctx context.Context, arg InsertPingCheck
 }
 
 const insertPluginCheckResult = `-- name: InsertPluginCheckResult :exec
-INSERT INTO plugin_check_results (
+INSERT INTO check_results_plugin (
     check_id,
     plugin_name,
     plugin_version,
@@ -153,7 +153,7 @@ func (q *Queries) InsertPluginCheckResult(ctx context.Context, arg InsertPluginC
 }
 
 const insertTcpConnectCheckResult = `-- name: InsertTcpConnectCheckResult :exec
-INSERT INTO tcp_connect_check_results (
+INSERT INTO check_results_tcp_connect (
     check_id,
     resolved_ip,
     connected,
@@ -182,7 +182,7 @@ func (q *Queries) InsertTcpConnectCheckResult(ctx context.Context, arg InsertTcp
 }
 
 const insertTracerouteCheckResult = `-- name: InsertTracerouteCheckResult :exec
-INSERT INTO traceroute_check_results (
+INSERT INTO check_results_traceroute (
     check_id,
     target_reached,
     total_time_ms,
@@ -208,7 +208,7 @@ func (q *Queries) InsertTracerouteCheckResult(ctx context.Context, arg InsertTra
 }
 
 const insertTracerouteHop = `-- name: InsertTracerouteHop :exec
-INSERT INTO traceroute_hops (
+INSERT INTO check_results_traceroute_hops (
     id,
     check_id,
     hop,
@@ -240,7 +240,7 @@ func (q *Queries) InsertTracerouteHop(ctx context.Context, arg InsertTracerouteH
 }
 
 const insertUdpConnectCheckResult = `-- name: InsertUdpConnectCheckResult :exec
-INSERT INTO udp_connect_check_results (
+INSERT INTO check_results_udp_connect (
     check_id,
     resolved_ip,
     probe_successful,

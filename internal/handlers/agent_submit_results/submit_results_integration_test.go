@@ -169,9 +169,9 @@ func TestIntegration_PingBatch_Accepted(t *testing.T) {
 	}
 	var pingCnt int
 	db.DB().QueryRowContext(context.Background(),
-		`SELECT COUNT(*) FROM ping_check_results WHERE check_id = ?`, result.Id.String()).Scan(&pingCnt)
+		`SELECT COUNT(*) FROM check_results_ping WHERE check_id = ?`, result.Id.String()).Scan(&pingCnt)
 	if pingCnt != 1 {
-		t.Errorf("expected 1 row in ping_check_results, got %d", pingCnt)
+		t.Errorf("expected 1 row in check_results_ping, got %d", pingCnt)
 	}
 }
 
@@ -335,9 +335,9 @@ func TestIntegration_TracerouteHopsStored(t *testing.T) {
 	}
 
 	rows, err := db.DB().QueryContext(context.Background(),
-		`SELECT hop, address FROM traceroute_hops WHERE check_id = ? ORDER BY hop`, result.Id.String())
+		`SELECT hop, address FROM check_results_traceroute_hops WHERE check_id = ? ORDER BY hop`, result.Id.String())
 	if err != nil {
-		t.Fatalf("query traceroute_hops: %v", err)
+		t.Fatalf("query check_results_traceroute_hops: %v", err)
 	}
 	defer rows.Close()
 
@@ -386,7 +386,7 @@ func TestIntegration_MixedTypeBatch(t *testing.T) {
 			Id: uuid.Must(uuid.NewV7()), AgentId: agentID,
 			CheckType:  tracerouteCheckType(t, []api.TracerouteHop{{Hop: 1}}),
 			EndpointId: uuid.MustParse(endpointID),
-			Timestamp: time.Now().UTC(),
+			Timestamp:  time.Now().UTC(),
 		},
 	}
 

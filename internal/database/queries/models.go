@@ -52,6 +52,66 @@ type CheckResult struct {
 	ReceivedAt time.Time
 }
 
+type CheckResultsHttpGet struct {
+	CheckID           string
+	StatusCode        int64
+	ResponseTimeMs    sql.NullFloat64
+	ResponseSizeBytes sql.NullInt64
+	Error             sql.NullString
+}
+
+type CheckResultsPing struct {
+	CheckID              string
+	ResolvedIp           string
+	Successes            int64
+	Failures             int64
+	AvgResponseTimeMs    sql.NullFloat64
+	SuccessLatenciesJson string
+	ErrorsJson           sql.NullString
+}
+
+type CheckResultsPlugin struct {
+	CheckID        string
+	PluginName     string
+	PluginVersion  string
+	Success        int64
+	ResponseTimeMs sql.NullFloat64
+	Error          sql.NullString
+	DataJson       string
+}
+
+type CheckResultsTcpConnect struct {
+	CheckID       string
+	ResolvedIp    string
+	Connected     int64
+	ConnectTimeMs sql.NullFloat64
+	Error         sql.NullString
+}
+
+type CheckResultsTraceroute struct {
+	CheckID       string
+	TargetReached int64
+	TotalTimeMs   sql.NullFloat64
+	ErrorsJson    sql.NullString
+}
+
+type CheckResultsTracerouteHop struct {
+	ID             string
+	CheckID        string
+	Hop            int64
+	Address        sql.NullString
+	Hostname       sql.NullString
+	ResponseTimeMs sql.NullFloat64
+}
+
+type CheckResultsUdpConnect struct {
+	CheckID         string
+	ResolvedIp      string
+	ProbeSuccessful int64
+	ResponseTimeMs  sql.NullFloat64
+	Error           sql.NullString
+}
+
 type Endpoint struct {
 	ID        string
 	AgentID   string
@@ -67,34 +127,6 @@ type EndpointTag struct {
 	TagID      string
 }
 
-type HttpGetCheckResult struct {
-	CheckID           string
-	StatusCode        int64
-	ResponseTimeMs    sql.NullFloat64
-	ResponseSizeBytes sql.NullInt64
-	Error             sql.NullString
-}
-
-type PingCheckResult struct {
-	CheckID              string
-	ResolvedIp           string
-	Successes            int64
-	Failures             int64
-	AvgResponseTimeMs    sql.NullFloat64
-	SuccessLatenciesJson string
-	ErrorsJson           sql.NullString
-}
-
-type PluginCheckResult struct {
-	CheckID        string
-	PluginName     string
-	PluginVersion  string
-	Success        int64
-	ResponseTimeMs sql.NullFloat64
-	Error          sql.NullString
-	DataJson       string
-}
-
 type Section struct {
 	ID       string
 	TenantID string
@@ -108,42 +140,10 @@ type Tag struct {
 	Scope     string
 }
 
-type TcpConnectCheckResult struct {
-	CheckID       string
-	ResolvedIp    string
-	Connected     int64
-	ConnectTimeMs sql.NullFloat64
-	Error         sql.NullString
-}
-
 type Tenant struct {
 	ID        string
 	Name      string
 	CreatedAt time.Time
-}
-
-type TracerouteCheckResult struct {
-	CheckID       string
-	TargetReached int64
-	TotalTimeMs   sql.NullFloat64
-	ErrorsJson    sql.NullString
-}
-
-type TracerouteHop struct {
-	ID             string
-	CheckID        string
-	Hop            int64
-	Address        sql.NullString
-	Hostname       sql.NullString
-	ResponseTimeMs sql.NullFloat64
-}
-
-type UdpConnectCheckResult struct {
-	CheckID         string
-	ResolvedIp      string
-	ProbeSuccessful int64
-	ResponseTimeMs  sql.NullFloat64
-	Error           sql.NullString
 }
 
 type User struct {

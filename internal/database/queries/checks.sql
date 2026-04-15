@@ -12,7 +12,7 @@ INSERT INTO check_results (
 ) VALUES (?, ?, ?, ?, ?, ?);
 
 -- name: InsertPingCheckResult :exec
-INSERT INTO ping_check_results (
+INSERT INTO check_results_ping (
     check_id,
     resolved_ip,
     successes,
@@ -23,7 +23,7 @@ INSERT INTO ping_check_results (
 ) VALUES (?, ?, ?, ?, ?, ?, ?);
 
 -- name: InsertHttpGetCheckResult :exec
-INSERT INTO http_get_check_results (
+INSERT INTO check_results_http_get (
     check_id,
     status_code,
     response_time_ms,
@@ -32,7 +32,7 @@ INSERT INTO http_get_check_results (
 ) VALUES (?, ?, ?, ?, ?);
 
 -- name: InsertTcpConnectCheckResult :exec
-INSERT INTO tcp_connect_check_results (
+INSERT INTO check_results_tcp_connect (
     check_id,
     resolved_ip,
     connected,
@@ -41,7 +41,7 @@ INSERT INTO tcp_connect_check_results (
 ) VALUES (?, ?, ?, ?, ?);
 
 -- name: InsertUdpConnectCheckResult :exec
-INSERT INTO udp_connect_check_results (
+INSERT INTO check_results_udp_connect (
     check_id,
     resolved_ip,
     probe_successful,
@@ -50,7 +50,7 @@ INSERT INTO udp_connect_check_results (
 ) VALUES (?, ?, ?, ?, ?);
 
 -- name: InsertTracerouteCheckResult :exec
-INSERT INTO traceroute_check_results (
+INSERT INTO check_results_traceroute (
     check_id,
     target_reached,
     total_time_ms,
@@ -58,7 +58,7 @@ INSERT INTO traceroute_check_results (
 ) VALUES (?, ?, ?, ?);
 
 -- name: InsertTracerouteHop :exec
-INSERT INTO traceroute_hops (
+INSERT INTO check_results_traceroute_hops (
     id,
     check_id,
     hop,
@@ -68,7 +68,7 @@ INSERT INTO traceroute_hops (
 ) VALUES (?, ?, ?, ?, ?, ?);
 
 -- name: InsertPluginCheckResult :exec
-INSERT INTO plugin_check_results (
+INSERT INTO check_results_plugin (
     check_id,
     plugin_name,
     plugin_version,
