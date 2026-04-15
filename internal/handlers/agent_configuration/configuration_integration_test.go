@@ -127,12 +127,12 @@ func TestGetAgentConfiguration_Integration(t *testing.T) {
 
 	// Create endpoints for the agent
 	endpoint1ID := uuid.NewString()
-	if _, err = db.DB().ExecContext(ctx, "INSERT INTO endpoints (id, agent_id, address, enabled) VALUES (?, ?, ?, ?)", endpoint1ID, agentID, "192.168.1.1", 1); err != nil {
+	if _, err = db.DB().ExecContext(ctx, "INSERT INTO endpoints (id, agent_id, hostname, resolved_ip, enabled) VALUES (?, ?, ?, ?, ?)", endpoint1ID, agentID, "192.168.1.1", "192.168.1.1", 1); err != nil {
 		t.Fatalf("Failed to create endpoint: %v", err)
 	}
 
 	endpoint2ID := uuid.NewString()
-	if _, err = db.DB().ExecContext(ctx, "INSERT INTO endpoints (id, agent_id, address, enabled) VALUES (?, ?, ?, ?)", endpoint2ID, agentID, "8.8.8.8", 1); err != nil {
+	if _, err = db.DB().ExecContext(ctx, "INSERT INTO endpoints (id, agent_id, hostname, resolved_ip, enabled) VALUES (?, ?, ?, ?, ?)", endpoint2ID, agentID, "dns.google", "8.8.8.8", 1); err != nil {
 		t.Fatalf("Failed to create endpoint: %v", err)
 	}
 

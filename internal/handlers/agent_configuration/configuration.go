@@ -124,11 +124,12 @@ func (h *Handler) GetAgentConfiguration(ctx context.Context, request api.GetAgen
 		}
 
 		endpoint := api.Endpoint{
-			Id:      endpointUUID,
-			Address: endpointRow.Address,
-			Port:    portPtr,
-			Enabled: enabled,
-			Tags:    endpointTags,
+			Id:         endpointUUID,
+			Hostname:   endpointRow.Hostname,
+			ResolvedIp: endpointRow.ResolvedIp,
+			Port:       portPtr,
+			Enabled:    enabled,
+			Tags:       endpointTags,
 		}
 		endpoints = append(endpoints, endpoint)
 	}

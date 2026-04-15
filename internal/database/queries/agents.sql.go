@@ -99,14 +99,15 @@ func (q *Queries) GetAgentConfigurationBase(ctx context.Context, id string) (Get
 }
 
 const getAgentEndpoints = `-- name: GetAgentEndpoints :many
-SELECT id, address, port, enabled FROM endpoints WHERE agent_id = ?
+SELECT id, hostname, resolved_ip, port, enabled FROM endpoints WHERE agent_id = ?
 `
 
 type GetAgentEndpointsRow struct {
-	ID      string
-	Address string
-	Port    sql.NullInt64
-	Enabled int64
+	ID         string
+	Hostname   string
+	ResolvedIp string
+	Port       sql.NullInt64
+	Enabled    int64
 }
 
 func (q *Queries) GetAgentEndpoints(ctx context.Context, agentID string) ([]GetAgentEndpointsRow, error) {
@@ -120,7 +121,8 @@ func (q *Queries) GetAgentEndpoints(ctx context.Context, agentID string) ([]GetA
 		var i GetAgentEndpointsRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.Address,
+			&i.Hostname,
+			&i.ResolvedIp,
 			&i.Port,
 			&i.Enabled,
 		); err != nil {
