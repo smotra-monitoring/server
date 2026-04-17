@@ -29,6 +29,7 @@ import (
 	"github.com/smotra-monitoring/server/internal/handlers/agent_claim_status"
 	"github.com/smotra-monitoring/server/internal/handlers/agent_configuration"
 	"github.com/smotra-monitoring/server/internal/handlers/agent_register"
+	"github.com/smotra-monitoring/server/internal/handlers/auth"
 	"github.com/smotra-monitoring/server/internal/handlers/metrics"
 	"github.com/smotra-monitoring/server/internal/logger"
 )
@@ -40,6 +41,7 @@ type APIHandler struct {
 	agent_register      *agent_register.Handler
 	agent_claim_status  *agent_claim_status.Handler
 	agent_claim         *agent_claim.Handler
+	auth                *auth.Handler
 }
 
 // NewAPIHandler creates a new combined handler
@@ -48,6 +50,7 @@ func NewAPIHandler(logger *logger.Logger, db database.Database, cfg *config.Conf
 	registerHandler := agent_register.NewHandler(logger, db, cfg)
 	claimStatusHandler := agent_claim_status.NewHandler(logger, db, cfg)
 	claimHandler := agent_claim.NewHandler(logger, db)
+	authHandler := auth.NewHandler(logger, &cfg.Auth)
 
 	// Register handlers as metrics providers
 	metricsHandler.RegisterMetricsProvider(configHandler)
@@ -64,6 +67,7 @@ func NewAPIHandler(logger *logger.Logger, db database.Database, cfg *config.Conf
 		agent_register:      registerHandler,
 		agent_claim_status:  claimStatusHandler,
 		agent_claim:         claimHandler,
+		auth:                authHandler,
 	}
 }
 
@@ -85,4 +89,30 @@ func (h *APIHandler) GetAgentClaimStatus(ctx context.Context, request api.GetAge
 // PostClaimAgent delegates to agent claim handler
 func (h *APIHandler) PostClaimAgent(ctx context.Context, request api.PostClaimAgentRequestObject) (api.PostClaimAgentResponseObject, error) {
 	return h.agent_claim.Handle(ctx, request)
+}
+
+// ─── Auth handlers ─────────────────────────────────────────────────────────────
+
+func (h *APIHandler) Oauth2Authorize(ctx context.Context, request api.Oauth2AuthorizeRequestObject) (api.Oauth2AuthorizeResponseObject, error) {
+	return h.auth.Oauth2Authorize(ctx, request)
+}
+
+func (h *APIHandler) Oauth2Callback(ctx context.Context, request api.Oauth2CallbackRequestObject) (api.Oauth2CallbackResponseObject, error) {
+	return h.auth.Oauth2Callback(ctx, request)
+}
+
+func (h *APIHandler) Oauth2Token(ctx context.Context, request api.Oauth2TokenRequestObject) (api.Oauth2TokenResponseObject, error) {
+	return h.auth.Oauth2Token(ctx, request)
+}
+
+func (h *APIHandler) Oauth2Revoke(ctx context.Context, request api.Oauth2RevokeRequestObject) (api.Oauth2RevokeResponseObject, error) {
+	return h.auth.Oauth2Revoke(ctx, request)
+}
+
+func (h *APIHandler) GetUserInfo(ctx context.Context, request api.GetUserInfoRequestObject) (api.GetUserInfoResponseObject, error) {
+	return h.auth.GetUserInfo(ctx, request)
+}
+
+func (h *APIHandler) Logout(ctx context.Context, request api.LogoutRequestObject) (api.LogoutResponseObject, error) {
+	return h.auth.Logout(ctx, request)
 }
