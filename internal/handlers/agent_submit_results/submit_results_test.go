@@ -14,16 +14,15 @@ import (
 )
 
 // makePingCheck builds a CheckType union wrapping a PingCheck
-func makePingCheck(t *testing.T, resolved string, successes, failures int32, avgMs *float64) api.CheckType {
+func makePingCheck(t *testing.T, resolved string, successes, failures int32) api.CheckType {
 	t.Helper()
 	raw, _ := json.Marshal(api.PingCheck{
 		Type: "ping",
 		Result: api.PingResult{
-			ResolvedIp:        resolved,
-			Successes:         successes,
-			Failures:          failures,
-			AvgResponseTimeMs: avgMs,
-			SuccessLatencies:  []float64{},
+			ResolvedIp:       resolved,
+			Successes:        successes,
+			Failures:         failures,
+			SuccessLatencies: []float64{},
 		},
 	})
 	var ct api.CheckType
@@ -115,8 +114,7 @@ func TestHandle_AgentIDMismatch_Returns400(t *testing.T) {
 	urlAgentID := uuid.Must(uuid.NewV7())
 	wrongAgentID := uuid.Must(uuid.NewV7())
 
-	avg := 15.0
-	result := makeResult(wrongAgentID, makePingCheck(t, "1.2.3.4", 3, 0, &avg), uuid.Must(uuid.NewV7()))
+	result := makeResult(wrongAgentID, makePingCheck(t, "1.2.3.4", 3, 0), uuid.Must(uuid.NewV7()))
 
 	resp, err := h.Handle(context.Background(), api.SubmitAgentResultsRequestObject{
 		AgentId: urlAgentID,
@@ -138,8 +136,7 @@ func TestHandle_ZeroEndpointID_Returns400(t *testing.T) {
 	h := NewHandler(logger.Default(), testutil.NewMockDatabase())
 
 	agentID := uuid.Must(uuid.NewV7())
-	avg := 10.0
-	result := makeResult(agentID, makePingCheck(t, "1.2.3.4", 1, 0, &avg), uuid.UUID{}) // zero UUID = missing field
+	result := makeResult(agentID, makePingCheck(t, "1.2.3.4", 1, 0), uuid.UUID{}) // zero UUID = missing field
 
 	resp, err := h.Handle(context.Background(), api.SubmitAgentResultsRequestObject{
 		AgentId: agentID,

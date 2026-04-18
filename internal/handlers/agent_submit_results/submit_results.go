@@ -331,14 +331,10 @@ func (h *Handler) insertTypeSpecificResult(ctx context.Context, q *queries.Queri
 		success = ping.Result.Successes > 0
 		latenciesJSON, _ := json.Marshal(ping.Result.SuccessLatencies)
 		err = q.InsertPingCheckResult(ctx, queries.InsertPingCheckResultParams{
-			CheckID:    resultID,
-			ResolvedIp: ping.Result.ResolvedIp,
-			Successes:  int64(ping.Result.Successes),
-			Failures:   int64(ping.Result.Failures),
-			AvgResponseTimeMs: sql.NullFloat64{
-				Float64: ptrFloat64Val(ping.Result.AvgResponseTimeMs),
-				Valid:   ping.Result.AvgResponseTimeMs != nil,
-			},
+			CheckID:              resultID,
+			ResolvedIp:           ping.Result.ResolvedIp,
+			Successes:            int64(ping.Result.Successes),
+			Failures:             int64(ping.Result.Failures),
 			SuccessLatenciesJson: string(latenciesJSON),
 			ErrorsJson:           marshalErrorDetails(ping.Result.ErrorDetails),
 		})
@@ -414,11 +410,7 @@ func (h *Handler) insertTypeSpecificResult(ctx context.Context, q *queries.Queri
 		err = q.InsertTracerouteCheckResult(ctx, queries.InsertTracerouteCheckResultParams{
 			CheckID:       resultID,
 			TargetReached: boolToInt64(tr.Result.TargetReached),
-			TotalTimeMs: sql.NullFloat64{
-				Float64: ptrFloat64Val(tr.Result.TotalTimeMs),
-				Valid:   tr.Result.TotalTimeMs != nil,
-			},
-			ErrorsJson: marshalErrorDetails(tr.Result.ErrorDetails),
+			ErrorsJson:    marshalErrorDetails(tr.Result.ErrorDetails),
 		})
 		if err != nil {
 			return

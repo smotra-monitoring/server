@@ -75,15 +75,13 @@ func setupRealDB(t *testing.T) (database.Database, uuid.UUID) {
 
 func pingCheckType(t *testing.T, resolved string, successes, failures int32) api.CheckType {
 	t.Helper()
-	avg := 12.5
 	raw, _ := json.Marshal(api.PingCheck{
 		Type: "ping",
 		Result: api.PingResult{
-			ResolvedIp:        resolved,
-			Successes:         successes,
-			Failures:          failures,
-			AvgResponseTimeMs: &avg,
-			SuccessLatencies:  []float64{10.0, 15.0},
+			ResolvedIp:       resolved,
+			Successes:        successes,
+			Failures:         failures,
+			SuccessLatencies: []float64{10.0, 15.0},
 		},
 	})
 	var ct api.CheckType
@@ -95,12 +93,10 @@ func pingCheckType(t *testing.T, resolved string, successes, failures int32) api
 
 func tracerouteCheckType(t *testing.T, hops []api.TracerouteHop) api.CheckType {
 	t.Helper()
-	total := 45.2
 	raw, _ := json.Marshal(api.TracerouteCheck{
 		Type: "traceroute",
 		Result: api.TracerouteResult{
 			TargetReached: true,
-			TotalTimeMs:   &total,
 			Hops:          hops,
 		},
 	})

@@ -133,15 +133,13 @@ func benchMarshal(b *testing.B, v any) api.CheckType {
 
 func benchPingCT(b *testing.B) api.CheckType {
 	b.Helper()
-	avg := 12.5
 	return benchMarshal(b, api.PingCheck{
 		Type: "ping",
 		Result: api.PingResult{
-			ResolvedIp:        "8.8.8.8",
-			Successes:         5,
-			Failures:          0,
-			AvgResponseTimeMs: &avg,
-			SuccessLatencies:  []float64{10.0, 12.0, 15.0},
+			ResolvedIp:       "8.8.8.8",
+			Successes:        5,
+			Failures:         0,
+			SuccessLatencies: []float64{10.0, 12.0, 15.0},
 		},
 	})
 }
@@ -204,7 +202,6 @@ func benchPluginCT(b *testing.B) api.CheckType {
 // benchTracerouteCTN builds a traceroute CheckType with numHops hops.
 func benchTracerouteCTN(b *testing.B, numHops int) api.CheckType {
 	b.Helper()
-	total := float64(numHops) * 3.0
 	hops := make([]api.TracerouteHop, numHops)
 	for i := range hops {
 		lat := []float64{float64(i+1) * 2.5}
@@ -221,7 +218,6 @@ func benchTracerouteCTN(b *testing.B, numHops int) api.CheckType {
 		Type: "traceroute",
 		Result: api.TracerouteResult{
 			TargetReached: true,
-			TotalTimeMs:   &total,
 			Hops:          hops,
 		},
 	})

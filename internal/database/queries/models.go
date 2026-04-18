@@ -65,7 +65,6 @@ type CheckResultsPing struct {
 	ResolvedIp           string
 	Successes            int64
 	Failures             int64
-	AvgResponseTimeMs    sql.NullFloat64
 	SuccessLatenciesJson string
 	ErrorsJson           sql.NullString
 }
@@ -91,7 +90,6 @@ type CheckResultsTcpConnect struct {
 type CheckResultsTraceroute struct {
 	CheckID       string
 	TargetReached int64
-	TotalTimeMs   sql.NullFloat64
 	ErrorsJson    sql.NullString
 }
 

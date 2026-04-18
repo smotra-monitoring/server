@@ -297,8 +297,6 @@ type PingCheckType string
 
 // PingResult defines model for PingResult.
 type PingResult struct {
-	AvgResponseTimeMs *float64 `json:"avg_response_time_ms"`
-
 	// ErrorDetails Error information from a check, stored as an extensible JSON object
 	ErrorDetails *ErrorDetails `json:"error_details"`
 	Failures     int32         `json:"failures"`
@@ -428,7 +426,6 @@ type TracerouteResult struct {
 	ErrorDetails  *ErrorDetails   `json:"error_details"`
 	Hops          []TracerouteHop `json:"hops"`
 	TargetReached bool            `json:"target_reached"`
-	TotalTimeMs   *float64        `json:"total_time_ms"`
 }
 
 // UUIDv7 UUID version 7 as per RFC 4122

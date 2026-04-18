@@ -88,10 +88,9 @@ INSERT INTO check_results_ping (
     resolved_ip,
     successes,
     failures,
-    avg_response_time_ms,
     success_latencies_json,
     errors_json
-) VALUES (?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?)
 `
 
 type InsertPingCheckResultParams struct {
@@ -99,7 +98,6 @@ type InsertPingCheckResultParams struct {
 	ResolvedIp           string
 	Successes            int64
 	Failures             int64
-	AvgResponseTimeMs    sql.NullFloat64
 	SuccessLatenciesJson string
 	ErrorsJson           sql.NullString
 }
@@ -110,7 +108,6 @@ func (q *Queries) InsertPingCheckResult(ctx context.Context, arg InsertPingCheck
 		arg.ResolvedIp,
 		arg.Successes,
 		arg.Failures,
-		arg.AvgResponseTimeMs,
 		arg.SuccessLatenciesJson,
 		arg.ErrorsJson,
 	)
@@ -185,25 +182,18 @@ const insertTracerouteCheckResult = `-- name: InsertTracerouteCheckResult :exec
 INSERT INTO check_results_traceroute (
     check_id,
     target_reached,
-    total_time_ms,
     errors_json
-) VALUES (?, ?, ?, ?)
+) VALUES (?, ?, ?)
 `
 
 type InsertTracerouteCheckResultParams struct {
 	CheckID       string
 	TargetReached int64
-	TotalTimeMs   sql.NullFloat64
 	ErrorsJson    sql.NullString
 }
 
 func (q *Queries) InsertTracerouteCheckResult(ctx context.Context, arg InsertTracerouteCheckResultParams) error {
-	_, err := q.db.ExecContext(ctx, insertTracerouteCheckResult,
-		arg.CheckID,
-		arg.TargetReached,
-		arg.TotalTimeMs,
-		arg.ErrorsJson,
-	)
+	_, err := q.db.ExecContext(ctx, insertTracerouteCheckResult, arg.CheckID, arg.TargetReached, arg.ErrorsJson)
 	return err
 }
 

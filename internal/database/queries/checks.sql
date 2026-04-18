@@ -17,10 +17,9 @@ INSERT INTO check_results_ping (
     resolved_ip,
     successes,
     failures,
-    avg_response_time_ms,
     success_latencies_json,
     errors_json
-) VALUES (?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?);
 
 -- name: InsertHttpGetCheckResult :exec
 INSERT INTO check_results_http_get (
@@ -53,9 +52,8 @@ INSERT INTO check_results_udp_connect (
 INSERT INTO check_results_traceroute (
     check_id,
     target_reached,
-    total_time_ms,
     errors_json
-) VALUES (?, ?, ?, ?);
+) VALUES (?, ?, ?);
 
 -- name: InsertTracerouteHop :exec
 INSERT INTO check_results_traceroute_hops (
