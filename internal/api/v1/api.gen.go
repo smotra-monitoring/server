@@ -196,19 +196,15 @@ type ClaimStatusPending struct {
 // ClaimStatusPendingEnum Pending claim status
 type ClaimStatusPendingEnum string
 
-// Endpoint An endpoint to monitor
+// Endpoint An endpoint to monitor (IP address, hostname, or URL)
 type Endpoint struct {
-	Enabled bool `json:"enabled"`
-
-	// Hostname Original monitoring target hostname, IP address, or URL as configured
-	Hostname string `json:"hostname"`
+	// Address IP address, hostname, or URL
+	Address string `json:"address"`
+	Enabled bool   `json:"enabled"`
 
 	// Id UUID version 7 as per RFC 4122
 	Id   UUIDv7 `json:"id"`
 	Port *int   `json:"port,omitempty"`
-
-	// ResolvedIp Resolved IP address of the hostname (populated after DNS resolution)
-	ResolvedIp string `json:"resolved_ip"`
 
 	// Tags Tags associated with the target
 	Tags []string `json:"tags"`

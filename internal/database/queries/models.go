@@ -113,14 +113,13 @@ type CheckResultsUdpConnect struct {
 }
 
 type Endpoint struct {
-	ID         string
-	AgentID    string
-	Hostname   string
-	ResolvedIp string
-	Port       sql.NullInt64
-	Enabled    int64
-	UpdatedAt  time.Time
-	CreatedAt  time.Time
+	ID        string
+	AgentID   string
+	Address   string
+	Port      sql.NullInt64
+	Enabled   int64
+	UpdatedAt time.Time
+	CreatedAt time.Time
 }
 
 type EndpointTag struct {

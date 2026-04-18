@@ -129,8 +129,8 @@ func TestIntegration_PingBatch_Accepted(t *testing.T) {
 
 	endpointID := uuid.Must(uuid.NewV7()).String()
 	if _, err := db.DB().ExecContext(ctx,
-		`INSERT INTO endpoints (id, agent_id, hostname, resolved_ip, enabled) VALUES (?, ?, ?, ?, 1)`,
-		endpointID, agentID.String(), "dns.google", "8.8.8.8"); err != nil {
+		`INSERT INTO endpoints (id, agent_id, address, enabled) VALUES (?, ?, ?, 1)`,
+		endpointID, agentID.String(), "8.8.8.8"); err != nil {
 		t.Fatalf("insert endpoint: %v", err)
 	}
 
@@ -183,8 +183,8 @@ func TestIntegration_Deduplication(t *testing.T) {
 
 	endpointID := uuid.Must(uuid.NewV7()).String()
 	if _, err := db.DB().ExecContext(ctx,
-		`INSERT INTO endpoints (id, agent_id, hostname, resolved_ip, enabled) VALUES (?, ?, ?, ?, 1)`,
-		endpointID, agentID.String(), "one.one.one.one", "1.1.1.1"); err != nil {
+		`INSERT INTO endpoints (id, agent_id, address, enabled) VALUES (?, ?, ?, 1)`,
+		endpointID, agentID.String(), "1.1.1.1"); err != nil {
 		t.Fatalf("insert endpoint: %v", err)
 	}
 
@@ -233,8 +233,8 @@ func TestIntegration_UpdatesLastSeenAt(t *testing.T) {
 
 	endpointID := uuid.Must(uuid.NewV7()).String()
 	if _, err := db.DB().ExecContext(ctx,
-		`INSERT INTO endpoints (id, agent_id, hostname, resolved_ip, enabled) VALUES (?, ?, ?, ?, 1)`,
-		endpointID, agentID.String(), "nine.nine.nine.nine", "9.9.9.9"); err != nil {
+		`INSERT INTO endpoints (id, agent_id, address, enabled) VALUES (?, ?, ?, 1)`,
+		endpointID, agentID.String(), "9.9.9.9"); err != nil {
 		t.Fatalf("insert endpoint: %v", err)
 	}
 
@@ -273,8 +273,8 @@ func TestIntegration_EndpointIDStored(t *testing.T) {
 
 	endpointID := uuid.Must(uuid.NewV7()).String()
 	if _, err := db.DB().ExecContext(ctx,
-		`INSERT INTO endpoints (id, agent_id, hostname, resolved_ip, enabled) VALUES (?, ?, ?, ?, 1)`,
-		endpointID, agentID.String(), "ten.zero.zero.one", "10.0.0.1"); err != nil {
+		`INSERT INTO endpoints (id, agent_id, address, enabled) VALUES (?, ?, ?, 1)`,
+		endpointID, agentID.String(), "10.0.0.1"); err != nil {
 		t.Fatalf("insert endpoint: %v", err)
 	}
 
@@ -309,8 +309,8 @@ func TestIntegration_TracerouteHopsStored(t *testing.T) {
 
 	endpointID := uuid.Must(uuid.NewV7()).String()
 	if _, err := db.DB().ExecContext(ctx,
-		`INSERT INTO endpoints (id, agent_id, hostname, resolved_ip, enabled) VALUES (?, ?, ?, ?, 1)`,
-		endpointID, agentID.String(), "ten.zero.zero.one", "10.0.0.1"); err != nil {
+		`INSERT INTO endpoints (id, agent_id, address, enabled) VALUES (?, ?, ?, 1)`,
+		endpointID, agentID.String(), "10.0.0.1"); err != nil {
 		t.Fatalf("insert endpoint: %v", err)
 	}
 
@@ -369,8 +369,8 @@ func TestIntegration_MixedTypeBatch(t *testing.T) {
 
 	endpointID := uuid.Must(uuid.NewV7()).String()
 	if _, err := db.DB().ExecContext(ctx,
-		`INSERT INTO endpoints (id, agent_id, hostname, resolved_ip, enabled) VALUES (?, ?, ?, ?, 1)`,
-		endpointID, agentID.String(), "dns.google", "8.8.8.8"); err != nil {
+		`INSERT INTO endpoints (id, agent_id, address, enabled) VALUES (?, ?, ?, 1)`,
+		endpointID, agentID.String(), "8.8.8.8"); err != nil {
 		t.Fatalf("insert endpoint: %v", err)
 	}
 
@@ -452,8 +452,8 @@ func TestIntegration_WrongAgentEndpointID_Returns422(t *testing.T) {
 	}
 	otherEndpointID := uuid.Must(uuid.NewV7()).String()
 	if _, err := db.DB().ExecContext(ctx,
-		`INSERT INTO endpoints (id, agent_id, hostname, resolved_ip, enabled) VALUES (?, ?, ?, ?, 1)`,
-		otherEndpointID, otherAgentID, "nine.nine.nine.nine", "9.9.9.9"); err != nil {
+		`INSERT INTO endpoints (id, agent_id, address, enabled) VALUES (?, ?, ?, 1)`,
+		otherEndpointID, otherAgentID, "9.9.9.9"); err != nil {
 		t.Fatalf("insert other endpoint: %v", err)
 	}
 

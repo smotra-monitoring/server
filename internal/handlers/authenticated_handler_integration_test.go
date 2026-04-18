@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -22,8 +23,16 @@ func TestAuthenticatedHandler_Integration(t *testing.T) {
 	db := testutil.SetupTestSQLiteDB(t)
 	ctx := context.Background()
 
-	// Apply all schema migrations
-	testutil.ApplyMigrations(t, ctx, db.DB(), "../../data/db/dev/migrations")
+	// Apply schema
+	schemaSQL, err := os.ReadFile("../../data/db/dev/migrations/0001_schema.up.sql")
+	if err != nil {
+		t.Fatalf("Failed to read schema file: %v", err)
+	}
+
+	_, err = db.DB().ExecContext(ctx, string(schemaSQL))
+	if err != nil {
+		t.Fatalf("Failed to apply schema: %v", err)
+	}
 
 	log := logger.New(logger.Config{Level: "error", Format: "json"})
 
@@ -36,7 +45,7 @@ func TestAuthenticatedHandler_Integration(t *testing.T) {
 	apiKey := "test-secret-key-123"
 	apiKeyHash := middleware.HashAPIKeyForTests(apiKey) // Helper function we need to export
 
-	_, err := db.DB().ExecContext(ctx, "INSERT INTO tenants (id, name) VALUES (?, ?)", tenantID, "Test Tenant")
+	_, err = db.DB().ExecContext(ctx, "INSERT INTO tenants (id, name) VALUES (?, ?)", tenantID, "Test Tenant")
 	if err != nil {
 		t.Fatalf("Failed to create tenant: %v", err)
 	}
