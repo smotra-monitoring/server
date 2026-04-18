@@ -28,7 +28,7 @@ INSERT INTO check_results_http_get (
     status_code,
     response_time_ms,
     response_size_bytes,
-    error
+    errors_json
 ) VALUES (?, ?, ?, ?, ?);
 
 -- name: InsertTcpConnectCheckResult :exec
@@ -37,7 +37,7 @@ INSERT INTO check_results_tcp_connect (
     resolved_ip,
     connected,
     connect_time_ms,
-    error
+    errors_json
 ) VALUES (?, ?, ?, ?, ?);
 
 -- name: InsertUdpConnectCheckResult :exec
@@ -46,7 +46,7 @@ INSERT INTO check_results_udp_connect (
     resolved_ip,
     probe_successful,
     response_time_ms,
-    error
+    errors_json
 ) VALUES (?, ?, ?, ?, ?);
 
 -- name: InsertTracerouteCheckResult :exec
@@ -74,6 +74,6 @@ INSERT INTO check_results_plugin (
     plugin_version,
     success,
     response_time_ms,
-    error,
+    errors_json,
     data_json
 ) VALUES (?, ?, ?, ?, ?, ?, ?);

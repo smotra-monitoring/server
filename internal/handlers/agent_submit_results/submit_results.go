@@ -330,11 +330,6 @@ func (h *Handler) insertTypeSpecificResult(ctx context.Context, q *queries.Queri
 		checkType = "ping"
 		success = ping.Result.Successes > 0
 		latenciesJSON, _ := json.Marshal(ping.Result.SuccessLatencies)
-		var errorsJSON sql.NullString
-		if ping.Result.Errors != nil && len(*ping.Result.Errors) > 0 {
-			b, _ := json.Marshal(*ping.Result.Errors)
-			errorsJSON = sql.NullString{String: string(b), Valid: true}
-		}
 		err = q.InsertPingCheckResult(ctx, queries.InsertPingCheckResultParams{
 			CheckID:    resultID,
 			ResolvedIp: ping.Result.ResolvedIp,
@@ -345,7 +340,7 @@ func (h *Handler) insertTypeSpecificResult(ctx context.Context, q *queries.Queri
 				Valid:   ping.Result.AvgResponseTimeMs != nil,
 			},
 			SuccessLatenciesJson: string(latenciesJSON),
-			ErrorsJson:           errorsJSON,
+			ErrorsJson:           marshalErrorDetails(ping.Result.ErrorDetails),
 		})
 		return
 
@@ -367,10 +362,7 @@ func (h *Handler) insertTypeSpecificResult(ctx context.Context, q *queries.Queri
 				Int64: ptrInt64Val(httpGet.Result.ResponseSizeBytes),
 				Valid: httpGet.Result.ResponseSizeBytes != nil,
 			},
-			Error: sql.NullString{
-				String: ptrStringVal(httpGet.Result.Error),
-				Valid:  httpGet.Result.Error != nil,
-			},
+			ErrorsJson: marshalErrorDetails(httpGet.Result.ErrorDetails),
 		})
 		return
 
@@ -389,10 +381,7 @@ func (h *Handler) insertTypeSpecificResult(ctx context.Context, q *queries.Queri
 				Float64: ptrFloat64Val(tcp.Result.ConnectTimeMs),
 				Valid:   tcp.Result.ConnectTimeMs != nil,
 			},
-			Error: sql.NullString{
-				String: ptrStringVal(tcp.Result.Error),
-				Valid:  tcp.Result.Error != nil,
-			},
+			ErrorsJson: marshalErrorDetails(tcp.Result.ErrorDetails),
 		})
 		return
 
@@ -411,10 +400,7 @@ func (h *Handler) insertTypeSpecificResult(ctx context.Context, q *queries.Queri
 				Float64: ptrFloat64Val(udp.Result.ResponseTimeMs),
 				Valid:   udp.Result.ResponseTimeMs != nil,
 			},
-			Error: sql.NullString{
-				String: ptrStringVal(udp.Result.Error),
-				Valid:  udp.Result.Error != nil,
-			},
+			ErrorsJson: marshalErrorDetails(udp.Result.ErrorDetails),
 		})
 		return
 
@@ -425,11 +411,6 @@ func (h *Handler) insertTypeSpecificResult(ctx context.Context, q *queries.Queri
 		}
 		checkType = "traceroute"
 		success = tr.Result.TargetReached
-		var trErrorsJSON sql.NullString
-		if tr.Result.Errors != nil && len(*tr.Result.Errors) > 0 {
-			b, _ := json.Marshal(*tr.Result.Errors)
-			trErrorsJSON = sql.NullString{String: string(b), Valid: true}
-		}
 		err = q.InsertTracerouteCheckResult(ctx, queries.InsertTracerouteCheckResultParams{
 			CheckID:       resultID,
 			TargetReached: boolToInt64(tr.Result.TargetReached),
@@ -437,7 +418,7 @@ func (h *Handler) insertTypeSpecificResult(ctx context.Context, q *queries.Queri
 				Float64: ptrFloat64Val(tr.Result.TotalTimeMs),
 				Valid:   tr.Result.TotalTimeMs != nil,
 			},
-			ErrorsJson: trErrorsJSON,
+			ErrorsJson: marshalErrorDetails(tr.Result.ErrorDetails),
 		})
 		if err != nil {
 			return
@@ -481,11 +462,8 @@ func (h *Handler) insertTypeSpecificResult(ctx context.Context, q *queries.Queri
 				Float64: ptrFloat64Val(plugin.Result.ResponseTimeMs),
 				Valid:   plugin.Result.ResponseTimeMs != nil,
 			},
-			Error: sql.NullString{
-				String: ptrStringVal(plugin.Result.Error),
-				Valid:  plugin.Result.Error != nil,
-			},
-			DataJson: string(dataJSON),
+			ErrorsJson: marshalErrorDetails(plugin.Result.ErrorDetails),
+			DataJson:   string(dataJSON),
 		})
 		return
 
@@ -546,6 +524,19 @@ func ptrStringVal(p *string) string {
 		return ""
 	}
 	return *p
+}
+
+// marshalErrorDetails encodes an ErrorDetails value as {"errors":[...]} JSON
+// for storage in the errors_json column. Returns sql.NullString{} when nil or empty.
+func marshalErrorDetails(ed *api.ErrorDetails) sql.NullString {
+	if ed == nil || ed.Errors == nil || len(*ed.Errors) == 0 {
+		return sql.NullString{}
+	}
+	type obj struct {
+		Errors []string `json:"errors"`
+	}
+	b, _ := json.Marshal(obj{Errors: *ed.Errors})
+	return sql.NullString{String: string(b), Valid: true}
 }
 
 func boolToInt64(b bool) int64 {

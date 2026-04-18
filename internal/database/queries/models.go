@@ -57,7 +57,7 @@ type CheckResultsHttpGet struct {
 	StatusCode        int64
 	ResponseTimeMs    sql.NullFloat64
 	ResponseSizeBytes sql.NullInt64
-	Error             sql.NullString
+	ErrorsJson        sql.NullString
 }
 
 type CheckResultsPing struct {
@@ -76,7 +76,7 @@ type CheckResultsPlugin struct {
 	PluginVersion  string
 	Success        int64
 	ResponseTimeMs sql.NullFloat64
-	Error          sql.NullString
+	ErrorsJson     sql.NullString
 	DataJson       string
 }
 
@@ -85,7 +85,7 @@ type CheckResultsTcpConnect struct {
 	ResolvedIp    string
 	Connected     int64
 	ConnectTimeMs sql.NullFloat64
-	Error         sql.NullString
+	ErrorsJson    sql.NullString
 }
 
 type CheckResultsTraceroute struct {
@@ -109,7 +109,7 @@ type CheckResultsUdpConnect struct {
 	ResolvedIp      string
 	ProbeSuccessful int64
 	ResponseTimeMs  sql.NullFloat64
-	Error           sql.NullString
+	ErrorsJson      sql.NullString
 }
 
 type Endpoint struct {

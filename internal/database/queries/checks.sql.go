@@ -59,7 +59,7 @@ INSERT INTO check_results_http_get (
     status_code,
     response_time_ms,
     response_size_bytes,
-    error
+    errors_json
 ) VALUES (?, ?, ?, ?, ?)
 `
 
@@ -68,7 +68,7 @@ type InsertHttpGetCheckResultParams struct {
 	StatusCode        int64
 	ResponseTimeMs    sql.NullFloat64
 	ResponseSizeBytes sql.NullInt64
-	Error             sql.NullString
+	ErrorsJson        sql.NullString
 }
 
 func (q *Queries) InsertHttpGetCheckResult(ctx context.Context, arg InsertHttpGetCheckResultParams) error {
@@ -77,7 +77,7 @@ func (q *Queries) InsertHttpGetCheckResult(ctx context.Context, arg InsertHttpGe
 		arg.StatusCode,
 		arg.ResponseTimeMs,
 		arg.ResponseSizeBytes,
-		arg.Error,
+		arg.ErrorsJson,
 	)
 	return err
 }
@@ -124,7 +124,7 @@ INSERT INTO check_results_plugin (
     plugin_version,
     success,
     response_time_ms,
-    error,
+    errors_json,
     data_json
 ) VALUES (?, ?, ?, ?, ?, ?, ?)
 `
@@ -135,7 +135,7 @@ type InsertPluginCheckResultParams struct {
 	PluginVersion  string
 	Success        int64
 	ResponseTimeMs sql.NullFloat64
-	Error          sql.NullString
+	ErrorsJson     sql.NullString
 	DataJson       string
 }
 
@@ -146,7 +146,7 @@ func (q *Queries) InsertPluginCheckResult(ctx context.Context, arg InsertPluginC
 		arg.PluginVersion,
 		arg.Success,
 		arg.ResponseTimeMs,
-		arg.Error,
+		arg.ErrorsJson,
 		arg.DataJson,
 	)
 	return err
@@ -158,7 +158,7 @@ INSERT INTO check_results_tcp_connect (
     resolved_ip,
     connected,
     connect_time_ms,
-    error
+    errors_json
 ) VALUES (?, ?, ?, ?, ?)
 `
 
@@ -167,7 +167,7 @@ type InsertTcpConnectCheckResultParams struct {
 	ResolvedIp    string
 	Connected     int64
 	ConnectTimeMs sql.NullFloat64
-	Error         sql.NullString
+	ErrorsJson    sql.NullString
 }
 
 func (q *Queries) InsertTcpConnectCheckResult(ctx context.Context, arg InsertTcpConnectCheckResultParams) error {
@@ -176,7 +176,7 @@ func (q *Queries) InsertTcpConnectCheckResult(ctx context.Context, arg InsertTcp
 		arg.ResolvedIp,
 		arg.Connected,
 		arg.ConnectTimeMs,
-		arg.Error,
+		arg.ErrorsJson,
 	)
 	return err
 }
@@ -245,7 +245,7 @@ INSERT INTO check_results_udp_connect (
     resolved_ip,
     probe_successful,
     response_time_ms,
-    error
+    errors_json
 ) VALUES (?, ?, ?, ?, ?)
 `
 
@@ -254,7 +254,7 @@ type InsertUdpConnectCheckResultParams struct {
 	ResolvedIp      string
 	ProbeSuccessful int64
 	ResponseTimeMs  sql.NullFloat64
-	Error           sql.NullString
+	ErrorsJson      sql.NullString
 }
 
 func (q *Queries) InsertUdpConnectCheckResult(ctx context.Context, arg InsertUdpConnectCheckResultParams) error {
@@ -263,7 +263,7 @@ func (q *Queries) InsertUdpConnectCheckResult(ctx context.Context, arg InsertUdp
 		arg.ResolvedIp,
 		arg.ProbeSuccessful,
 		arg.ResponseTimeMs,
-		arg.Error,
+		arg.ErrorsJson,
 	)
 	return err
 }

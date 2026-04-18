@@ -228,6 +228,12 @@ type Error struct {
 	RequestId        *openapi_types.UUID `json:"request_id,omitempty"`
 }
 
+// ErrorDetails Error information from a check, stored as an extensible JSON object
+type ErrorDetails struct {
+	// Errors List of error messages from the check
+	Errors *[]string `json:"errors,omitempty"`
+}
+
 // HttpGetCheck defines model for HttpGetCheck.
 type HttpGetCheck struct {
 	Result HttpGetResult    `json:"result"`
@@ -239,11 +245,12 @@ type HttpGetCheckType string
 
 // HttpGetResult defines model for HttpGetResult.
 type HttpGetResult struct {
-	Error             *string  `json:"error"`
-	ResponseSizeBytes *int64   `json:"response_size_bytes"`
-	ResponseTimeMs    *float64 `json:"response_time_ms"`
-	StatusCode        int32    `json:"status_code"`
-	Success           bool     `json:"success"`
+	// ErrorDetails Error information from a check, stored as an extensible JSON object
+	ErrorDetails      *ErrorDetails `json:"error_details"`
+	ResponseSizeBytes *int64        `json:"response_size_bytes"`
+	ResponseTimeMs    *float64      `json:"response_time_ms"`
+	StatusCode        int32         `json:"status_code"`
+	Success           bool          `json:"success"`
 }
 
 // MonitoringConfig defines model for MonitoringConfig.
@@ -294,9 +301,11 @@ type PingCheckType string
 
 // PingResult defines model for PingResult.
 type PingResult struct {
-	AvgResponseTimeMs *float64  `json:"avg_response_time_ms"`
-	Errors            *[]string `json:"errors,omitempty"`
-	Failures          int32     `json:"failures"`
+	AvgResponseTimeMs *float64 `json:"avg_response_time_ms"`
+
+	// ErrorDetails Error information from a check, stored as an extensible JSON object
+	ErrorDetails *ErrorDetails `json:"error_details"`
+	Failures     int32         `json:"failures"`
 
 	// ResolvedIp Resolved IP address of the target
 	ResolvedIp       string    `json:"resolved_ip"`
@@ -315,12 +324,14 @@ type PluginCheckType string
 
 // PluginResult defines model for PluginResult.
 type PluginResult struct {
-	Data           map[string]string `json:"data"`
-	Error          *string           `json:"error"`
-	PluginName     string            `json:"plugin_name"`
-	PluginVersion  string            `json:"plugin_version"`
-	ResponseTimeMs *float64          `json:"response_time_ms"`
-	Success        bool              `json:"success"`
+	Data map[string]string `json:"data"`
+
+	// ErrorDetails Error information from a check, stored as an extensible JSON object
+	ErrorDetails   *ErrorDetails `json:"error_details"`
+	PluginName     string        `json:"plugin_name"`
+	PluginVersion  string        `json:"plugin_version"`
+	ResponseTimeMs *float64      `json:"response_time_ms"`
+	Success        bool          `json:"success"`
 }
 
 // RegistrationStatus Status of agent registration
@@ -390,8 +401,10 @@ type TcpConnectCheckType string
 type TcpConnectResult struct {
 	ConnectTimeMs *float64 `json:"connect_time_ms"`
 	Connected     bool     `json:"connected"`
-	Error         *string  `json:"error"`
-	ResolvedIp    string   `json:"resolved_ip"`
+
+	// ErrorDetails Error information from a check, stored as an extensible JSON object
+	ErrorDetails *ErrorDetails `json:"error_details"`
+	ResolvedIp   string        `json:"resolved_ip"`
 }
 
 // TracerouteCheck defines model for TracerouteCheck.
@@ -415,7 +428,8 @@ type TracerouteHop struct {
 
 // TracerouteResult defines model for TracerouteResult.
 type TracerouteResult struct {
-	Errors        *[]string       `json:"errors,omitempty"`
+	// ErrorDetails Error information from a check, stored as an extensible JSON object
+	ErrorDetails  *ErrorDetails   `json:"error_details"`
 	Hops          []TracerouteHop `json:"hops"`
 	TargetReached bool            `json:"target_reached"`
 	TotalTimeMs   *float64        `json:"total_time_ms"`
@@ -435,10 +449,11 @@ type UdpConnectCheckType string
 
 // UdpConnectResult defines model for UdpConnectResult.
 type UdpConnectResult struct {
-	Error           *string  `json:"error"`
-	ProbeSuccessful bool     `json:"probe_successful"`
-	ResolvedIp      string   `json:"resolved_ip"`
-	ResponseTimeMs  *float64 `json:"response_time_ms"`
+	// ErrorDetails Error information from a check, stored as an extensible JSON object
+	ErrorDetails    *ErrorDetails `json:"error_details"`
+	ProbeSuccessful bool          `json:"probe_successful"`
+	ResolvedIp      string        `json:"resolved_ip"`
+	ResponseTimeMs  *float64      `json:"response_time_ms"`
 }
 
 // AgentId UUID version 7 as per RFC 4122
