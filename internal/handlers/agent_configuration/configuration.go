@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync/atomic"
+	"time"
 
 	"github.com/google/uuid"
 	api "github.com/smotra-monitoring/server/internal/api/v1"
@@ -140,6 +141,14 @@ func (h *Handler) GetAgentConfiguration(ctx context.Context, request api.GetAgen
 		h.getConfigurationFailure.Add(1)
 		h.logger.Error("Failed to parse agent ID", "error", err, "agent_id", agentID)
 		return nil, fmt.Errorf("failed to parse agent ID: %w", err)
+	}
+
+	// Update last_seen_at — non-fatal, log and continue
+	if err := q.UpdateAgentLastSeen(ctx, queries.UpdateAgentLastSeenParams{
+		LastSeenAt: sql.NullTime{Time: time.Now(), Valid: true},
+		ID:         agentID,
+	}); err != nil {
+		h.logger.Warn("Failed to update agent last_seen_at", "agent_id", agentID, "error", err.Error())
 	}
 
 	// Build the response
