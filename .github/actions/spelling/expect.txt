@@ -23,7 +23,7 @@ IDPs
 implementet
 isready
 justfile
-jwt
+JWT
 ldflags
 Linting
 Liquibase
@@ -49,7 +49,6 @@ sqlite
 sslmode
 SSRF
 standalone
-subfolders
 testutil
 Tful
 tokio
@@ -60,4 +59,3 @@ versioned
 versioning
 wontfix
 workflows
-yourusername
