@@ -54,7 +54,8 @@ type endpoints struct {
 	EndSessionEndpoint    string // empty if unsupported
 }
 
-// resolve returns the effective Endpoints for the given provider config.
+// resolve returns the effective Endpoints for the given provider
+// It performs OIDC discovery if needed and applies config overrides.
 func (r *endpointResolver) resolve(ctx context.Context, cfg config.OAuthProviderConfig) (endpoints, error) {
 	var base endpoints
 
