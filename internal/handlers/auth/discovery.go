@@ -45,8 +45,8 @@ func newEndpointResolver(client *http.Client) *endpointResolver {
 	}
 }
 
-// Endpoints holds the resolved OAuth2/OIDC endpoint URLs for a provider.
-type Endpoints struct {
+// endpoints holds the resolved OAuth2/OIDC endpoint URLs for a provider.
+type endpoints struct {
 	AuthorizationEndpoint string
 	TokenEndpoint         string
 	UserInfoEndpoint      string
@@ -55,19 +55,19 @@ type Endpoints struct {
 }
 
 // resolve returns the effective Endpoints for the given provider config.
-func (r *endpointResolver) resolve(ctx context.Context, cfg config.OAuthProviderConfig) (Endpoints, error) {
-	var base Endpoints
+func (r *endpointResolver) resolve(ctx context.Context, cfg config.OAuthProviderConfig) (endpoints, error) {
+	var base endpoints
 
 	switch cfg.Type {
 	case config.OAuthProviderTypeOIDC:
 		if cfg.IssuerURL == "" {
-			return Endpoints{}, fmt.Errorf("issuer_url is required for type=oidc")
+			return endpoints{}, fmt.Errorf("issuer_url is required for type=oidc")
 		}
 		doc, err := r.fetchDiscovery(ctx, cfg.IssuerURL)
 		if err != nil {
-			return Endpoints{}, fmt.Errorf("OIDC discovery failed: %w", err)
+			return endpoints{}, fmt.Errorf("OIDC discovery failed: %w", err)
 		}
-		base = Endpoints{
+		base = endpoints{
 			AuthorizationEndpoint: doc.AuthorizationEndpoint,
 			TokenEndpoint:         doc.TokenEndpoint,
 			UserInfoEndpoint:      doc.UserInfoEndpoint,
@@ -76,7 +76,7 @@ func (r *endpointResolver) resolve(ctx context.Context, cfg config.OAuthProvider
 		}
 
 	case config.OAuthProviderTypeStatic:
-		base = Endpoints{
+		base = endpoints{
 			AuthorizationEndpoint: cfg.AuthorizationEndpoint,
 			TokenEndpoint:         cfg.TokenEndpoint,
 			UserInfoEndpoint:      cfg.UserInfoEndpoint,
@@ -85,7 +85,7 @@ func (r *endpointResolver) resolve(ctx context.Context, cfg config.OAuthProvider
 		}
 
 	default:
-		return Endpoints{}, fmt.Errorf("unknown provider type %q", cfg.Type)
+		return endpoints{}, fmt.Errorf("unknown provider type %q", cfg.Type)
 	}
 
 	// Explicit overrides in config win over discovery values.
