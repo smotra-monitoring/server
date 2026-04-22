@@ -1,3 +1,4 @@
+AAD
 apps
 blocklist
 Bulima
@@ -11,7 +12,9 @@ cosmtrek
 coverprofile
 createdb
 deregistration
+Entra
 google
+googleusercontent
 gotestsum
 Grafana
 greenlit
