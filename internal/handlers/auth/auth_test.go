@@ -467,6 +467,9 @@ func TestLogout_WithEndSessionEndpoint_Returns302(t *testing.T) {
 	if !strings.Contains(redirect.Headers.Location, "post_logout_redirect_uri=") {
 		t.Error("expected post_logout_redirect_uri in Location")
 	}
+	if !strings.Contains(redirect.Headers.Location, "frontend.test") {
+		t.Errorf("expected post_logout_redirect_uri in Location (%q)", redirect.Headers.Location)
+	}
 }
 
 func TestLogout_NoEndSessionEndpoint_Returns200(t *testing.T) {
@@ -484,44 +487,6 @@ func TestLogout_NoEndSessionEndpoint_Returns200(t *testing.T) {
 }
 
 // ─── SSRF protection ──────────────────────────────────────────────────────────
-
-func TestOauth2Authorize_SSRFViaStaticEndpoint_Returns400(t *testing.T) {
-	log, _ := testutil.NewTestLogger()
-	cfg := &config.AuthConfig{
-		FrontendCallbackURL: "http://frontend.test/callback",
-		ServerCallbackURL:   "http://server.test/callback",
-		Providers: map[string]config.OAuthProviderConfig{
-			"ssrf": {
-				Type:                  config.OAuthProviderTypeStatic,
-				ClientID:              "id",
-				AuthorizationEndpoint: "http://169.254.169.254/metadata",
-				TokenEndpoint:         "http://169.254.169.254/token",
-				UserInfoEndpoint:      "http://169.254.169.254/userinfo",
-			},
-		},
-	}
-	h := auth.NewHandler(log, cfg)
-
-	resp, err := h.Oauth2Authorize(context.Background(), api.Oauth2AuthorizeRequestObject{
-		Params: api.Oauth2AuthorizeParams{
-			Provider:            "ssrf",
-			Scope:               "openid",
-			State:               "s",
-			CodeChallenge:       "c",
-			CodeChallengeMethod: api.S256,
-		},
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	// Authorize itself just builds a URL — SSRF check fires when the server
-	// would make an outbound request (token, revoke, userinfo, discovery).
-	// The redirect URL returned here points to the IDP — the browser follows it,
-	// not the server. So Authorize does NOT perform SSRF validation on the
-	// authorization endpoint (that's a browser redirect, not a server fetch).
-	// SSRF protection applies to: postForm (token, revoke) and fetchDiscovery.
-	_ = resp // outcome depends on implementation detail; SSRF tested via postForm
-}
 
 func TestOauth2Token_SSRFViaStaticEndpoint_Returns400(t *testing.T) {
 	log, _ := testutil.NewTestLogger()
@@ -657,5 +622,3 @@ func TestOauth2Authorize_OIDCProvider_UsesDiscoveryEndpoints(t *testing.T) {
 		t.Errorf("expected discovery to be called once (cached), got %d calls", discoveryCallCount)
 	}
 }
-
-func strPtr(s string) *string { return &s }
