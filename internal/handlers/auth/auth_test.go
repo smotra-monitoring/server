@@ -258,8 +258,8 @@ func TestOauth2Token_AuthorizationCode_ProxiesToIDP(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected 200 response, got %T", resp)
 	}
-	if tokenResp.AccessToken != "access-token-123" {
-		t.Errorf("expected access_token=access-token-123, got %q", tokenResp.AccessToken)
+	if tokenResp.AccessToken != tokenResponse.AccessToken {
+		t.Errorf("expected access_token=%q, got %q", tokenResponse.AccessToken, tokenResp.AccessToken)
 	}
 }
 
