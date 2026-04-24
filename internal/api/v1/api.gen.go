@@ -22,11 +22,6 @@ const (
 	OAuth2AuthorizationCodeScopes = "OAuth2AuthorizationCode.Scopes"
 )
 
-// Defines values for AuthorizationCodeTokenRequestGrantType.
-const (
-	AuthorizationCode AuthorizationCodeTokenRequestGrantType = "authorization_code"
-)
-
 // Defines values for ClaimResponseStatus.
 const (
 	ClaimResponseStatusClaimed ClaimResponseStatus = "claimed"
@@ -40,11 +35,6 @@ const (
 // Defines values for ClaimStatusPendingEnum.
 const (
 	ClaimStatusPendingEnumPendingClaim ClaimStatusPendingEnum = "pending_claim"
-)
-
-// Defines values for RefreshTokenRequestGrantType.
-const (
-	RefreshTokenRequestGrantTypeRefreshToken RefreshTokenRequestGrantType = "refresh_token"
 )
 
 // Defines values for RegistrationStatus.
@@ -61,6 +51,12 @@ const (
 const (
 	Oauth2RevokeFormdataBodyTokenTypeHintAccessToken  Oauth2RevokeFormdataBodyTokenTypeHint = "access_token"
 	Oauth2RevokeFormdataBodyTokenTypeHintRefreshToken Oauth2RevokeFormdataBodyTokenTypeHint = "refresh_token"
+)
+
+// Defines values for Oauth2TokenFormdataBodyGrantType.
+const (
+	Oauth2TokenFormdataBodyGrantTypeAuthorizationCode Oauth2TokenFormdataBodyGrantType = "authorization_code"
+	Oauth2TokenFormdataBodyGrantTypeRefreshToken      Oauth2TokenFormdataBodyGrantType = "refresh_token"
 )
 
 // AgentConfig defines model for AgentConfig.
@@ -113,26 +109,6 @@ type AgentSelfRegistration struct {
 	// Hostname System hostname of the machine running the agent
 	Hostname string `json:"hostname"`
 }
-
-// AuthorizationCodeTokenRequest defines model for AuthorizationCodeTokenRequest.
-type AuthorizationCodeTokenRequest struct {
-	// Code Authorization code received at the callback endpoint
-	Code string `json:"code"`
-
-	// CodeVerifier PKCE code verifier (plain secret that was hashed to produce code_challenge)
-	CodeVerifier string                                 `json:"code_verifier"`
-	GrantType    AuthorizationCodeTokenRequestGrantType `json:"grant_type"`
-
-	// Provider Identity provider name. Must match a provider configured on the server.
-	// Built-in values: okta, auth0, azure, google, github.
-	Provider string `json:"provider"`
-
-	// RedirectUri Must exactly match the redirect_uri used in the authorization request
-	RedirectUri string `json:"redirect_uri"`
-}
-
-// AuthorizationCodeTokenRequestGrantType defines model for AuthorizationCodeTokenRequest.GrantType.
-type AuthorizationCodeTokenRequestGrantType string
 
 // ClaimAgentRequest defines model for ClaimAgentRequest.
 type ClaimAgentRequest struct {
@@ -242,24 +218,6 @@ type MonitoringConfig struct {
 	// TracerouteOnFailure Enable traceroute on failed pings
 	TracerouteOnFailure bool `json:"traceroute_on_failure"`
 }
-
-// RefreshTokenRequest defines model for RefreshTokenRequest.
-type RefreshTokenRequest struct {
-	GrantType RefreshTokenRequestGrantType `json:"grant_type"`
-
-	// Provider Identity provider name. Must match a provider configured on the server.
-	// Built-in values: okta, auth0, azure, google, github.
-	Provider string `json:"provider"`
-
-	// RefreshToken Refresh token previously issued by the IDP
-	RefreshToken string `json:"refresh_token"`
-
-	// Scope Optional scope restriction (subset of originally granted scopes)
-	Scope *string `json:"scope,omitempty"`
-}
-
-// RefreshTokenRequestGrantType defines model for RefreshTokenRequest.GrantType.
-type RefreshTokenRequestGrantType string
 
 // RegistrationStatus Status of agent registration
 type RegistrationStatus string
@@ -422,8 +380,31 @@ type Oauth2RevokeFormdataBodyTokenTypeHint string
 
 // Oauth2TokenFormdataBody defines parameters for Oauth2Token.
 type Oauth2TokenFormdataBody struct {
-	union json.RawMessage
+	// Code Authorization code (required for authorization_code grant)
+	Code *string `form:"code,omitempty" json:"code,omitempty"`
+
+	// CodeVerifier PKCE code verifier (required for authorization_code grant)
+	CodeVerifier *string `form:"code_verifier,omitempty" json:"code_verifier,omitempty"`
+
+	// GrantType OAuth2 grant type
+	GrantType Oauth2TokenFormdataBodyGrantType `form:"grant_type" json:"grant_type"`
+
+	// Provider Identity provider name. Must match a provider configured on the server.
+	// Built-in values: okta, auth0, azure, google, github.
+	Provider string `form:"provider" json:"provider"`
+
+	// RedirectUri Must exactly match the redirect_uri used in the authorization request (required for authorization_code grant)
+	RedirectUri *string `form:"redirect_uri,omitempty" json:"redirect_uri,omitempty"`
+
+	// RefreshToken Refresh token (required for refresh_token grant)
+	RefreshToken *string `form:"refresh_token,omitempty" json:"refresh_token,omitempty"`
+
+	// Scope Optional scope restriction (refresh_token grant only)
+	Scope *string `form:"scope,omitempty" json:"scope,omitempty"`
 }
+
+// Oauth2TokenFormdataBodyGrantType defines parameters for Oauth2Token.
+type Oauth2TokenFormdataBodyGrantType string
 
 // GetUserInfoParams defines parameters for GetUserInfo.
 type GetUserInfoParams struct {

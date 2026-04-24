@@ -15,7 +15,6 @@ import (
 	"github.com/smotra-monitoring/server/internal/config"
 	"github.com/smotra-monitoring/server/internal/database"
 	"github.com/smotra-monitoring/server/internal/handlers"
-	"github.com/smotra-monitoring/server/internal/handlers/auth"
 	"github.com/smotra-monitoring/server/internal/logger"
 	"github.com/smotra-monitoring/server/internal/middleware"
 )
@@ -99,9 +98,7 @@ func main() {
 
 	// Initialize handlers with authentication wrapper
 	apiHandler := handlers.NewAuthenticatedHandler(log, db, cfg, appVersion, metricsHandler)
-	apiStrictHandler := api.NewStrictHandler(apiHandler, []api.StrictMiddlewareFunc{
-		auth.InjectHTTPRequestMiddleware,
-	})
+	apiStrictHandler := api.NewStrictHandler(apiHandler, nil)
 	r.Route("/v1", func(r chi.Router) {
 		api.HandlerFromMux(apiStrictHandler, r)
 

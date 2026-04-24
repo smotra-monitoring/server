@@ -215,27 +215,17 @@ func (h *Handler) Oauth2Callback(_ context.Context, req api.Oauth2CallbackReques
 
 // Oauth2Token handles POST /auth/oauth2/token.
 // Proxies the token request to the IDP, adding client_id from server config.
-// Form fields are read from the raw HTTP request injected into context by
-// InjectHTTPRequestMiddleware (r.ParseForm has already been called by the
-// generated strict handler wrapper before the middleware chain runs).
 func (h *Handler) Oauth2Token(ctx context.Context, req api.Oauth2TokenRequestObject) (api.Oauth2TokenResponseObject, error) {
 	h.tokenTotal.Add(1)
 
-	httpReq, ok := ctx.Value(httpRequestContextKey{}).(*http.Request)
-	if !ok || httpReq == nil {
+	if req.Body == nil {
 		return api.Oauth2Token400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{
-			Error: "internal_error", Message: "Request context unavailable",
+			Error: "bad_request", Message: "Request body is required",
 		}}, nil
 	}
 
-	providerName := httpReq.FormValue("provider")
-	grantType := httpReq.FormValue("grant_type")
-
-	if providerName == "" {
-		return api.Oauth2Token400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{
-			Error: "bad_request", Message: "provider is required",
-		}}, nil
-	}
+	providerName := req.Body.Provider
+	grantType := string(req.Body.GrantType)
 
 	cfg, err := h.resolveProvider(providerName)
 	if err != nil {
@@ -259,30 +249,31 @@ func (h *Handler) Oauth2Token(ctx context.Context, req api.Oauth2TokenRequestObj
 	form.Set("grant_type", grantType)
 	form.Set("client_id", cfg.ClientID)
 
-	switch grantType {
-	case "authorization_code":
-		code := httpReq.FormValue("code")
-		redirectURI := httpReq.FormValue("redirect_uri")
-		codeVerifier := httpReq.FormValue("code_verifier")
-		if code == "" || redirectURI == "" || codeVerifier == "" {
+	switch req.Body.GrantType {
+	case api.Oauth2TokenFormdataBodyGrantTypeAuthorizationCode:
+		if req.Body.Code == nil || req.Body.RedirectUri == nil || req.Body.CodeVerifier == nil {
 			return api.Oauth2Token400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{
 				Error: "bad_request", Message: "code, redirect_uri, and code_verifier are required for authorization_code grant",
 			}}, nil
 		}
-		form.Set("code", code)
-		form.Set("redirect_uri", redirectURI)
-		form.Set("code_verifier", codeVerifier)
+		if *req.Body.Code == "" || *req.Body.RedirectUri == "" || *req.Body.CodeVerifier == "" {
+			return api.Oauth2Token400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{
+				Error: "bad_request", Message: "code, redirect_uri, and code_verifier are required for authorization_code grant",
+			}}, nil
+		}
+		form.Set("code", *req.Body.Code)
+		form.Set("redirect_uri", *req.Body.RedirectUri)
+		form.Set("code_verifier", *req.Body.CodeVerifier)
 
-	case "refresh_token":
-		refreshToken := httpReq.FormValue("refresh_token")
-		if refreshToken == "" {
+	case api.Oauth2TokenFormdataBodyGrantTypeRefreshToken:
+		if req.Body.RefreshToken == nil || *req.Body.RefreshToken == "" {
 			return api.Oauth2Token400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{
 				Error: "bad_request", Message: "refresh_token is required for refresh_token grant",
 			}}, nil
 		}
-		form.Set("refresh_token", refreshToken)
-		if scope := httpReq.FormValue("scope"); scope != "" {
-			form.Set("scope", scope)
+		form.Set("refresh_token", *req.Body.RefreshToken)
+		if req.Body.Scope != nil && *req.Body.Scope != "" {
+			form.Set("scope", *req.Body.Scope)
 		}
 
 	default:
@@ -518,29 +509,6 @@ func (h *Handler) Logout(ctx context.Context, req api.LogoutRequestObject) (api.
 }
 
 // ─── helpers ───────────────────────────────────────────────────────────────────
-
-// httpRequestContextKey is used to pass the original *http.Request through context
-// so handlers can access raw form values and headers.
-type httpRequestContextKey struct{}
-
-// InjectHTTPRequestMiddleware is a StrictMiddlewareFunc that stores the raw
-// *http.Request in the context before the strict handler is called.
-//
-// By the time this middleware runs, r.ParseForm() has already been called by the
-// generated strict handler wrapper, so r.Form and r.Header are fully populated.
-//
-// Usage: pass to api.NewStrictHandler(handler, []api.StrictMiddlewareFunc{auth.InjectHTTPRequestMiddleware})
-func InjectHTTPRequestMiddleware(next api.StrictHandlerFunc, operationID string) api.StrictHandlerFunc {
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		ctx = context.WithValue(ctx, httpRequestContextKey{}, r)
-		return next(ctx, w, r, request)
-	}
-}
-
-// WithHTTPRequest injects an HTTP request into a context for testing purposes.
-func WithHTTPRequest(ctx context.Context, r *http.Request) context.Context {
-	return context.WithValue(ctx, httpRequestContextKey{}, r)
-}
 
 // postForm performs a URL-encoded form POST to the given endpoint.
 func (h *Handler) postForm(ctx context.Context, endpoint string, form url.Values) (*http.Response, error) {

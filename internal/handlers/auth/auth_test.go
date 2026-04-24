@@ -237,22 +237,19 @@ func TestOauth2Token_AuthorizationCode_ProxiesToIDP(t *testing.T) {
 
 	h := newTestHandler(t, stub.URL)
 
-	// Build a request with form values injected via context.
-	form := url.Values{}
-	form.Set("provider", "teststatic")
-	form.Set("grant_type", "authorization_code")
-	form.Set("code", "auth-code")
-	form.Set("redirect_uri", "http://client.test/callback")
-	form.Set("code_verifier", "verifier123")
+	code := "auth-code"
+	redirectURI := "http://client.test/callback"
+	codeVerifier := "verifier123"
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/auth/oauth2/token",
-		strings.NewReader(form.Encode()))
-	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	_ = httpReq.ParseForm()
-
-	ctx := auth.WithHTTPRequest(context.Background(), httpReq)
-
-	resp, err := h.Oauth2Token(ctx, api.Oauth2TokenRequestObject{})
+	resp, err := h.Oauth2Token(context.Background(), api.Oauth2TokenRequestObject{
+		Body: &api.Oauth2TokenFormdataRequestBody{
+			Provider:     "teststatic",
+			GrantType:    api.Oauth2TokenFormdataBodyGrantTypeAuthorizationCode,
+			Code:         &code,
+			RedirectUri:  &redirectURI,
+			CodeVerifier: &codeVerifier,
+		},
+	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -269,13 +266,19 @@ func TestOauth2Token_AuthorizationCode_ProxiesToIDP(t *testing.T) {
 func TestOauth2Token_MissingProvider_Returns400(t *testing.T) {
 	h := newTestHandler(t, "http://idp.test")
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/auth/oauth2/token",
-		strings.NewReader("grant_type=authorization_code&code=c&redirect_uri=u&code_verifier=v"))
-	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	_ = httpReq.ParseForm()
+	code := "c"
+	redirectURI := "u"
+	codeVerifier := "v"
 
-	ctx := auth.WithHTTPRequest(context.Background(), httpReq)
-	resp, err := h.Oauth2Token(ctx, api.Oauth2TokenRequestObject{})
+	resp, err := h.Oauth2Token(context.Background(), api.Oauth2TokenRequestObject{
+		Body: &api.Oauth2TokenFormdataRequestBody{
+			Provider:     "", // missing provider
+			GrantType:    api.Oauth2TokenFormdataBodyGrantTypeAuthorizationCode,
+			Code:         &code,
+			RedirectUri:  &redirectURI,
+			CodeVerifier: &codeVerifier,
+		},
+	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -296,19 +299,19 @@ func TestOauth2Token_IDPError_SanitizesMessage(t *testing.T) {
 
 	h := newTestHandler(t, stub.URL)
 
-	form := url.Values{}
-	form.Set("provider", "teststatic")
-	form.Set("grant_type", "authorization_code")
-	form.Set("code", "bad-code")
-	form.Set("redirect_uri", "http://client.test/callback")
-	form.Set("code_verifier", "v")
+	code := "bad-code"
+	redirectURI := "http://client.test/callback"
+	codeVerifier := "v"
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/token", strings.NewReader(form.Encode()))
-	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	_ = httpReq.ParseForm()
-
-	ctx := auth.WithHTTPRequest(context.Background(), httpReq)
-	resp, err := h.Oauth2Token(ctx, api.Oauth2TokenRequestObject{})
+	resp, err := h.Oauth2Token(context.Background(), api.Oauth2TokenRequestObject{
+		Body: &api.Oauth2TokenFormdataRequestBody{
+			Provider:     "teststatic",
+			GrantType:    api.Oauth2TokenFormdataBodyGrantTypeAuthorizationCode,
+			Code:         &code,
+			RedirectUri:  &redirectURI,
+			CodeVerifier: &codeVerifier,
+		},
+	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -506,19 +509,19 @@ func TestOauth2Token_SSRFViaStaticEndpoint_Returns400(t *testing.T) {
 	}
 	h := auth.NewHandler(log, cfg)
 
-	form := url.Values{}
-	form.Set("provider", "ssrf")
-	form.Set("grant_type", "authorization_code")
-	form.Set("code", "c")
-	form.Set("redirect_uri", "http://client.test/callback")
-	form.Set("code_verifier", "v")
+	code := "c"
+	redirectURI := "http://client.test/callback"
+	codeVerifier := "v"
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/token", strings.NewReader(form.Encode()))
-	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	_ = httpReq.ParseForm()
-
-	ctx := auth.WithHTTPRequest(context.Background(), httpReq)
-	resp, err := h.Oauth2Token(ctx, api.Oauth2TokenRequestObject{})
+	resp, err := h.Oauth2Token(context.Background(), api.Oauth2TokenRequestObject{
+		Body: &api.Oauth2TokenFormdataRequestBody{
+			Provider:     "ssrf",
+			GrantType:    api.Oauth2TokenFormdataBodyGrantTypeAuthorizationCode,
+			Code:         &code,
+			RedirectUri:  &redirectURI,
+			CodeVerifier: &codeVerifier,
+		},
+	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
