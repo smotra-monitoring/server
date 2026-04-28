@@ -111,13 +111,15 @@ type CheckResultsUdpConnect struct {
 }
 
 type Endpoint struct {
-	ID        string
-	AgentID   string
-	Address   string
-	Port      sql.NullInt64
-	Enabled   int64
-	UpdatedAt time.Time
-	CreatedAt time.Time
+	ID            string
+	SectionID     string
+	Address       string
+	Port          sql.NullInt64
+	Enabled       int64
+	IsAgent       int64
+	LinkedAgentID sql.NullString
+	UpdatedAt     time.Time
+	CreatedAt     time.Time
 }
 
 type EndpointTag struct {
@@ -142,6 +144,22 @@ type Tenant struct {
 	ID        string
 	Name      string
 	CreatedAt time.Time
+}
+
+type Topology struct {
+	ID        string
+	SectionID string
+	Name      string
+	Type      string
+	Enabled   int64
+	UpdatedAt time.Time
+	CreatedAt time.Time
+}
+
+type TopologyMember struct {
+	TopologyID string
+	TagID      string
+	Role       string
 }
 
 type User struct {

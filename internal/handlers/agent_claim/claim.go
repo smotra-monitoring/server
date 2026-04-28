@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"sync/atomic"
 
+	"github.com/google/uuid"
 	api "github.com/smotra-monitoring/server/internal/api/v1"
 	"github.com/smotra-monitoring/server/internal/database"
 	"github.com/smotra-monitoring/server/internal/database/queries"
@@ -147,7 +148,7 @@ func (h *Handler) Handle(ctx context.Context, req api.PostClaimAgentRequestObjec
 		agentName = *req.Body.Name
 	}
 
-	// Create agent and mark claim atomically
+	// Create agent, associated endpoint and mark claim atomically
 	tx, err := h.db.DB().BeginTx(ctx, nil)
 	if err != nil {
 		h.logger.ErrorContext(ctx, "Failed to begin transaction",
@@ -179,6 +180,27 @@ func (h *Handler) Handle(ctx context.Context, req api.PostClaimAgentRequestObjec
 		AgentVersion: sql.NullString{String: claimFromDB.AgentVersion, Valid: true},
 	}); err != nil {
 		h.logger.ErrorContext(ctx, "Failed to create agent from claim",
+			slog.String("agentId", agentIDStr),
+			slog.String("error", err.Error()),
+		)
+		h.claimFailureTotal.Add(1)
+		return api.PostClaimAgent500JSONResponse{
+			InternalServerErrorJSONResponse: api.InternalServerErrorJSONResponse{
+				Error:   "internal_error",
+				Message: "Failed to claim agent",
+			},
+		}, nil
+	}
+
+	// Auto-register the agent as a section endpoint so it can participate in topologies.
+	endpointID := uuid.Must(uuid.NewV7()).String()
+	if _, err = txQueries.CreateAgentEndpoint(ctx, queries.CreateAgentEndpointParams{
+		ID:            endpointID,
+		SectionID:     req.Body.SectionId.String(),
+		Address:       claimFromDB.Hostname,
+		LinkedAgentID: sql.NullString{String: agentIDStr, Valid: true},
+	}); err != nil {
+		h.logger.ErrorContext(ctx, "Failed to create agent endpoint",
 			slog.String("agentId", agentIDStr),
 			slog.String("error", err.Error()),
 		)

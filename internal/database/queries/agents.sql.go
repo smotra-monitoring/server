@@ -98,45 +98,6 @@ func (q *Queries) GetAgentConfigurationBase(ctx context.Context, id string) (Get
 	return i, err
 }
 
-const getAgentEndpoints = `-- name: GetAgentEndpoints :many
-SELECT id, address, port, enabled FROM endpoints WHERE agent_id = ?
-`
-
-type GetAgentEndpointsRow struct {
-	ID      string
-	Address string
-	Port    sql.NullInt64
-	Enabled int64
-}
-
-func (q *Queries) GetAgentEndpoints(ctx context.Context, agentID string) ([]GetAgentEndpointsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getAgentEndpoints, agentID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetAgentEndpointsRow
-	for rows.Next() {
-		var i GetAgentEndpointsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Address,
-			&i.Port,
-			&i.Enabled,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getAgentTags = `-- name: GetAgentTags :many
 SELECT t.name FROM agent_tags at
 JOIN tags t ON at.tag_id = t.id
