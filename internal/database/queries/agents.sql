@@ -30,9 +30,6 @@ UPDATE agents
 SET config_version = ?, base_config = ?
 WHERE id = ?;
 
--- name: GetAgentEndpoints :many
-SELECT id, address, port, enabled FROM endpoints WHERE agent_id = ?;
-
 -- name: GetEndpointTags :many
 SELECT t.name FROM endpoint_tags et
 JOIN tags t ON et.tag_id = t.id
