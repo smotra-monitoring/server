@@ -176,6 +176,20 @@ func (q *Queries) UpdateAgentConfiguration(ctx context.Context, arg UpdateAgentC
 	return err
 }
 
+const updateAgentLastResultSubmittedAt = `-- name: UpdateAgentLastResultSubmittedAt :exec
+UPDATE agents SET last_result_submitted_at = ? WHERE id = ?
+`
+
+type UpdateAgentLastResultSubmittedAtParams struct {
+	LastResultSubmittedAt sql.NullTime
+	ID                    string
+}
+
+func (q *Queries) UpdateAgentLastResultSubmittedAt(ctx context.Context, arg UpdateAgentLastResultSubmittedAtParams) error {
+	_, err := q.db.ExecContext(ctx, updateAgentLastResultSubmittedAt, arg.LastResultSubmittedAt, arg.ID)
+	return err
+}
+
 const updateAgentLastSeen = `-- name: UpdateAgentLastSeen :exec
 UPDATE agents SET last_seen_at = ? WHERE id = ?
 `

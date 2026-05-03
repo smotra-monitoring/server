@@ -41,3 +41,6 @@ SELECT id, api_key_hash FROM agents WHERE id = ?;
 
 -- name: UpdateAgentLastSeen :exec
 UPDATE agents SET last_seen_at = ? WHERE id = ?;
+
+-- name: UpdateAgentLastResultSubmittedAt :exec
+UPDATE agents SET last_result_submitted_at = ? WHERE id = ?;
