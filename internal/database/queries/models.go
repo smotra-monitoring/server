@@ -10,17 +10,18 @@ import (
 )
 
 type Agent struct {
-	ID              string
-	SectionID       string
-	Name            string
-	ApiKeyHash      string
-	BaseConfig      string
-	ConfigVersion   int64
-	AgentVersion    sql.NullString
-	IpAddressesJson string
-	LastSeenAt      sql.NullTime
-	UpdatedAt       time.Time
-	CreatedAt       time.Time
+	ID                    string
+	SectionID             string
+	Name                  string
+	ApiKeyHash            string
+	BaseConfig            string
+	ConfigVersion         int64
+	AgentVersion          sql.NullString
+	IpAddressesJson       string
+	LastSeenAt            sql.NullTime
+	LastResultSubmittedAt sql.NullTime
+	UpdatedAt             time.Time
+	CreatedAt             time.Time
 }
 
 type AgentClaim struct {
@@ -42,6 +43,17 @@ type AgentClaim struct {
 type AgentTag struct {
 	AgentID string
 	TagID   string
+}
+
+type AgentVital struct {
+	ID               string
+	AgentID          string
+	CpuPct           sql.NullFloat64
+	MemUsedMb        sql.NullFloat64
+	MemTotalMb       sql.NullFloat64
+	SystemUptimeSecs sql.NullInt64
+	ReportedAt       time.Time
+	ReceivedAt       time.Time
 }
 
 type CheckResult struct {

@@ -65,6 +65,10 @@ func (s *testServerImpl) Logout(ctx context.Context, req api.LogoutRequestObject
 	return nil, nil
 }
 
+func (s *testServerImpl) SendAgentHeartbeat(ctx context.Context, req api.SendAgentHeartbeatRequestObject) (api.SendAgentHeartbeatResponseObject, error) {
+	return nil, nil
+}
+
 func setupTestRouter(h *Handler) *chi.Mux {
 	impl := &testServerImpl{Handler: h}
 	r := chi.NewRouter()
@@ -327,6 +331,49 @@ func TestIntegration_UpdatesLastSeenAt(t *testing.T) {
 	}
 	if lastSeen.Time.After(finish) {
 		t.Errorf("last_seen_at %v after expected finish time %v", lastSeen.Time, finish)
+	}
+}
+
+func TestIntegration_UpdatesLastResultSubmittedAt(t *testing.T) {
+	db, agentID, sectionID := setupRealDB(t)
+	h := NewHandler(logger.Default(), db)
+	router := setupTestRouter(h)
+	ctx := context.Background()
+
+	endpointID := uuid.Must(uuid.NewV7()).String()
+	if _, err := db.DB().ExecContext(ctx,
+		`INSERT INTO endpoints (id, section_id, address, enabled) VALUES (?, ?, ?, 1)`,
+		endpointID, sectionID, "9.9.9.8"); err != nil {
+		t.Fatalf("insert endpoint: %v", err)
+	}
+	setupTopologyPermission(t, db, sectionID, agentID.String(), endpointID)
+
+	start := time.Now().UTC().Add(-time.Second)
+	finish := start.Add(2 * time.Second)
+	result := api.MonitoringResult{
+		Id:         uuid.Must(uuid.NewV7()),
+		AgentId:    agentID,
+		CheckType:  pingCheckType(t, "9.9.9.8", 1, 0),
+		EndpointId: uuid.MustParse(endpointID),
+		Timestamp:  time.Now().UTC(),
+	}
+
+	w := postBatch(t, router, agentID, []api.MonitoringResult{result})
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("expected 202, got %d", w.Code)
+	}
+
+	var lastResultSubmittedAt sql.NullTime
+	db.DB().QueryRowContext(context.Background(),
+		`SELECT last_result_submitted_at FROM agents WHERE id = ?`, agentID.String()).Scan(&lastResultSubmittedAt)
+	if !lastResultSubmittedAt.Valid {
+		t.Fatal("last_result_submitted_at should be set")
+	}
+	if lastResultSubmittedAt.Time.Before(start) {
+		t.Errorf("last_result_submitted_at %v before submission time %v", lastResultSubmittedAt.Time, start)
+	}
+	if lastResultSubmittedAt.Time.After(finish) {
+		t.Errorf("last_result_submitted_at %v after expected finish time %v", lastResultSubmittedAt.Time, finish)
 	}
 }
 
