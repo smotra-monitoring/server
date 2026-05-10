@@ -30,7 +30,7 @@ func TestRoutesSeparation(t *testing.T) {
 	r.Use(middleware.RequestID(log))
 	r.Use(middleware.Logger(log))
 	r.Use(middleware.Recovery(log))
-	r.Use(middleware.CORS)
+	r.Use(middleware.CORS(cfg.CORS.Origin))
 	r.Use(middleware.AgentAPIKeyAuth(log, db))
 	r.Use(middleware.OAuth2Auth(log))
 
