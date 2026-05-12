@@ -192,8 +192,8 @@ X-Agent-API-Key: <api-key>
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `cpuUsagePercent` | float | Yes | CPU utilisation 0–100 |
-| `memoryUsagePercent` | float | Yes | Memory utilisation 0–100 |
+| `cpuUsagePercent` | float | Yes | CPU utilization 0–100 |
+| `memoryUsagePercent` | float | Yes | Memory utilization 0–100 |
 | `agentVersion` | string | No | Running agent version string |
 | `uptimeSeconds` | int | No | Agent process uptime in seconds |
 
