@@ -81,8 +81,6 @@ func (s *SQLiteDB) Ping(ctx context.Context) error {
 
 // Health returns health information about the database
 func (s *SQLiteDB) Health(ctx context.Context) (HealthInfo, error) {
-	start := time.Now()
-
 	info := HealthInfo{
 		Status: "unhealthy",
 	}
@@ -91,6 +89,8 @@ func (s *SQLiteDB) Health(ctx context.Context) (HealthInfo, error) {
 		info.Message = "database not initialized"
 		return info, fmt.Errorf("database not initialized")
 	}
+
+	start := time.Now()
 
 	// Ping the database
 	if err := s.db.PingContext(ctx); err != nil {

@@ -82,6 +82,8 @@ func main() {
 	r.Use(middleware.Logger(log))
 	r.Use(middleware.Recovery(log))
 	r.Use(middleware.CORS)
+	httpMetrics := middleware.NewHTTPMetrics()
+	r.Use(httpMetrics.Middleware)
 
 	// Authentication middleware - only attempts authentication, doesn't require it
 	// This allows public endpoints to work while authenticated endpoints can check the context
@@ -90,6 +92,8 @@ func main() {
 
 	// Create shared metrics handler
 	metricsHandler := handlers.NewMetricsHandler(log, db, appVersion)
+	metricsHandler.RegisterMetricsProvider(httpMetrics)
+	metricsHandler.RegisterMetricsProvider(database.NewDBMetrics(db))
 
 	// Register Health handler
 	healthHandler := handlers.NewHealthHandler(log, db, cfg, appVersion, metricsHandler)

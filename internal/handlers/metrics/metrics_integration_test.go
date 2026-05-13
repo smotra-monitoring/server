@@ -15,11 +15,10 @@ func TestPrometheusMetrics_Integration(t *testing.T) {
 
 	handler := NewHandler(logger, db, "1.0.0-integration")
 
-	// Set some metrics
-	handler.IncrementHTTPRequests(true)
-	handler.IncrementHTTPRequests(true)
-	handler.IncrementHTTPRequests(true)
-	handler.IncrementDBQueries(true)
+	// Register a stub provider that simulates the HTTP metrics provider
+	handler.RegisterMetricsProvider(&stubMetricsProvider{
+		output: "# HELP smotra_http_requests_total Total HTTP requests\n# TYPE smotra_http_requests_total counter\nsmotra_http_requests_total 3\n\n# HELP smotra_db_connections_open Open DB connections\n# TYPE smotra_db_connections_open gauge\nsmotra_db_connections_open 1\n\n",
+	})
 
 	ctx := context.Background()
 	resp, err := handler.PrometheusMetrics(ctx, struct{}{})
@@ -29,19 +28,20 @@ func TestPrometheusMetrics_Integration(t *testing.T) {
 	}
 
 	output := string(resp.(healthAPI.PrometheusMetrics200TextResponse))
+	// output := string(resp.(healthAPI.PrometheusMetrics200TextResponse))
 
-	// Verify metrics are present
+	// Verify provider-supplied metrics are present
 	if !strings.Contains(output, "smotra_http_requests_total 3") {
 		t.Error("expected http_requests_total to be 3")
 	}
 
-	if !strings.Contains(output, "smotra_db_queries_total 1") {
-		t.Error("expected db_queries_total to be 1")
+	if !strings.Contains(output, "smotra_db_connections_open 1") {
+		t.Error("expected db_connections_open to be 1")
 	}
 
-	// Database should be healthy with real database
+	// Database should be healthy with mock database
 	if !strings.Contains(output, "smotra_db_healthy 1") {
-		t.Error("expected db_healthy to be 1 with real database")
+		t.Error("expected db_healthy to be 1 with healthy mock database")
 	}
 
 	// Response time should be present
@@ -65,14 +65,11 @@ func TestPrometheusMetricsConcurrency_Integration(t *testing.T) {
 
 	handler := NewHandler(logger, db, "1.0.0")
 
-	// Simulate concurrent metric updates
+	// Simulate concurrent provider registrations
 	done := make(chan bool)
 	for i := 0; i < 10; i++ {
 		go func() {
-			for j := 0; j < 100; j++ {
-				handler.IncrementHTTPRequests(true)
-				handler.IncrementDBQueries(true)
-			}
+			handler.RegisterMetricsProvider(&stubMetricsProvider{output: "concurrent_metric 1\n"})
 			done <- true
 		}()
 	}
@@ -91,12 +88,9 @@ func TestPrometheusMetricsConcurrency_Integration(t *testing.T) {
 
 	output := string(resp.(healthAPI.PrometheusMetrics200TextResponse))
 
-	// Verify counters are correct
-	if !strings.Contains(output, "smotra_http_requests_total 1000") {
-		t.Errorf("expected http_requests_total to be 1000, got output: %s", output)
-	}
-
-	if !strings.Contains(output, "smotra_db_queries_total 1000") {
-		t.Errorf("expected db_queries_total to be 1000, got output: %s", output)
+	// All 10 providers should have contributed
+	count := strings.Count(output, "concurrent_metric 1")
+	if count != 10 {
+		t.Errorf("expected concurrent_metric to appear 10 times, got %d\noutput: %s", count, output)
 	}
 }
