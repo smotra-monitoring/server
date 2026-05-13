@@ -269,9 +269,12 @@ func TestExtractCheckInfo_TcpConnect_Connected(t *testing.T) {
 
 func TestExtractCheckInfo_TcpConnect_NotConnected(t *testing.T) {
 	result := makeResult(uuid.Must(uuid.NewV7()), makeTcpConnectCheck(t, false), uuid.Must(uuid.NewV7()))
-	_, success, err := extractCheckInfo(result)
+	checkType, success, err := extractCheckInfo(result)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if checkType != "tcpconnect" {
+		t.Errorf("expected checkType=tcpconnect, got %q", checkType)
 	}
 	if success {
 		t.Error("expected success=false")
@@ -294,9 +297,12 @@ func TestExtractCheckInfo_UdpConnect_Successful(t *testing.T) {
 
 func TestExtractCheckInfo_UdpConnect_Failed(t *testing.T) {
 	result := makeResult(uuid.Must(uuid.NewV7()), makeUdpConnectCheck(t, false), uuid.Must(uuid.NewV7()))
-	_, success, err := extractCheckInfo(result)
+	checkType, success, err := extractCheckInfo(result)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if checkType != "udpconnect" {
+		t.Errorf("expected checkType=udpconnect, got %q", checkType)
 	}
 	if success {
 		t.Error("expected success=false")
@@ -319,9 +325,12 @@ func TestExtractCheckInfo_Traceroute_Reached(t *testing.T) {
 
 func TestExtractCheckInfo_Traceroute_NotReached(t *testing.T) {
 	result := makeResult(uuid.Must(uuid.NewV7()), makeTracerouteCheck(t, false), uuid.Must(uuid.NewV7()))
-	_, success, err := extractCheckInfo(result)
+	checkType, success, err := extractCheckInfo(result)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if checkType != "traceroute" {
+		t.Errorf("expected checkType=traceroute, got %q", checkType)
 	}
 	if success {
 		t.Error("expected success=false")
@@ -344,9 +353,12 @@ func TestExtractCheckInfo_Plugin_Success(t *testing.T) {
 
 func TestExtractCheckInfo_Plugin_Failure(t *testing.T) {
 	result := makeResult(uuid.Must(uuid.NewV7()), makePluginCheck(t, false), uuid.Must(uuid.NewV7()))
-	_, success, err := extractCheckInfo(result)
+	checkType, success, err := extractCheckInfo(result)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if checkType != "plugin" {
+		t.Errorf("expected checkType=plugin, got %q", checkType)
 	}
 	if success {
 		t.Error("expected success=false")
