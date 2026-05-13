@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"runtime"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -34,9 +33,6 @@ type Handler struct {
 	dbQueriesTotal   atomic.Uint64
 	dbQueriesSuccess atomic.Uint64
 	dbQueriesFailure atomic.Uint64
-
-	// Agent metrics (will be populated from database)
-	agentMetrics sync.Map
 
 	// External metrics providers
 	metricsProviders []MetricsProvider
