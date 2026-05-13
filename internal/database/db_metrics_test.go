@@ -27,8 +27,8 @@ func TestDBMetrics_GetMetrics_Format(t *testing.T) {
 		"smotra_db_connections_open",
 		"smotra_db_connections_in_use",
 		"smotra_db_connections_idle",
-		"smotra_db_wait_count_total",
-		"smotra_db_wait_duration_ms",
+		"smotra_db_wait_connections_count_total",
+		"smotra_db_wait_connections_duration_ms",
 	} {
 		if !strings.Contains(out, expected) {
 			t.Errorf("expected %q in GetMetrics output:\n%s", expected, out)
