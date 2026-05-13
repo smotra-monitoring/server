@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -271,7 +272,7 @@ func TestRequireAuth_PresentButNotAuthenticated_Returns401(t *testing.T) {
 	}
 	ctx := context.WithValue(context.Background(), AuthContextKey, authInfo)
 
-	req := httptest.NewRequest("GET", "/agent/019bdeb2-50dc-794e-808b-cf47526b867f/configuration", nil)
+	req := httptest.NewRequest("GET", fmt.Sprintf("/agent/%s/configuration", authInfo.AgentID), nil)
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
