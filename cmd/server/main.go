@@ -91,7 +91,7 @@ func main() {
 	r.Use(middleware.OAuth2Auth(log))
 
 	// Create shared metrics handler
-	metricsHandler := handlers.NewMetricsHandler(log, db, appVersion)
+	metricsHandler := handlers.NewMetricsHandler(log, appVersion)
 	metricsHandler.RegisterMetricsProvider(httpMetrics)
 	metricsHandler.RegisterMetricsProvider(database.NewDBMetrics(db))
 

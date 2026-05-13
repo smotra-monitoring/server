@@ -1,10 +1,12 @@
 package database
 
 import (
+	"context"
 	"fmt"
+	"time"
 )
 
-// DBMetrics exposes database connection pool statistics as a MetricsProvider.
+// DBMetrics exposes database health and connection pool statistics as a MetricsProvider.
 type DBMetrics struct {
 	db Database
 }
@@ -14,11 +16,39 @@ func NewDBMetrics(db Database) *DBMetrics {
 	return &DBMetrics{db: db}
 }
 
-// GetMetrics returns Prometheus-formatted connection pool metrics.
+// GetMetrics returns Prometheus-formatted database health and connection pool metrics.
 func (m *DBMetrics) GetMetrics() string {
-	stats := m.db.DB().Stats()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 
 	var out string
+
+	// Health check
+	dbHealth, err := m.db.Health(ctx)
+	dbHealthy := 0.0
+	if err == nil {
+		dbHealthy = 1.0
+	}
+
+	out += "# HELP smotra_db_healthy Database health status (1 = healthy, 0 = unhealthy)\n"
+	out += "# TYPE smotra_db_healthy gauge\n"
+	out += fmt.Sprintf("smotra_db_healthy %.0f\n", dbHealthy)
+	out += "\n"
+
+	if err == nil {
+		out += "# HELP smotra_db_response_time_ms Database response time in milliseconds\n"
+		out += "# TYPE smotra_db_response_time_ms gauge\n"
+		out += fmt.Sprintf("smotra_db_response_time_ms %.2f\n", float64(dbHealth.ResponseTime.Milliseconds()))
+		out += "\n"
+	}
+
+	// Connection pool stats (only available when underlying *sql.DB is open)
+	sqlDB := m.db.DB()
+	if sqlDB == nil {
+		return out
+	}
+
+	stats := sqlDB.Stats()
 
 	out += "# HELP smotra_db_connections_open Current number of open connections to the database\n"
 	out += "# TYPE smotra_db_connections_open gauge\n"

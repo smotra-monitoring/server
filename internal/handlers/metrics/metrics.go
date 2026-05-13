@@ -7,7 +7,6 @@ import (
 	"time"
 
 	healthAPI "github.com/smotra-monitoring/server/internal/api/health"
-	"github.com/smotra-monitoring/server/internal/database"
 	"github.com/smotra-monitoring/server/internal/logger"
 )
 
@@ -19,7 +18,6 @@ type MetricsProvider interface {
 // Handler handles metrics endpoint
 type Handler struct {
 	logger     *logger.Logger
-	db         database.Database
 	startTime  time.Time
 	appVersion string
 
@@ -28,10 +26,9 @@ type Handler struct {
 }
 
 // NewHandler creates a new metrics handler
-func NewHandler(logger *logger.Logger, db database.Database, appVersion string) *Handler {
+func NewHandler(logger *logger.Logger, appVersion string) *Handler {
 	return &Handler{
 		logger:           logger.WithComponent("metrics"),
-		db:               db,
 		startTime:        time.Now(),
 		appVersion:       appVersion,
 		metricsProviders: []MetricsProvider{},
@@ -45,11 +42,11 @@ func (h *Handler) RegisterMetricsProvider(provider MetricsProvider) {
 
 // PrometheusMetrics implements the /metrics endpoint
 func (h *Handler) PrometheusMetrics(ctx context.Context, request healthAPI.PrometheusMetricsRequestObject) (healthAPI.PrometheusMetricsResponseObject, error) {
-	metrics := h.buildPrometheusMetrics(ctx)
+	metrics := h.buildPrometheusMetrics()
 	return healthAPI.PrometheusMetrics200TextResponse(metrics), nil
 }
 
-func (h *Handler) buildPrometheusMetrics(ctx context.Context) string {
+func (h *Handler) buildPrometheusMetrics() string {
 	var output string
 
 	// Server info
@@ -64,30 +61,6 @@ func (h *Handler) buildPrometheusMetrics(ctx context.Context) string {
 	output += "# TYPE smotra_uptime_seconds counter\n"
 	output += fmt.Sprintf("smotra_uptime_seconds %.2f\n", uptime)
 	output += "\n"
-
-	// Database health check
-	if h.db != nil {
-		dbCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-		defer cancel()
-
-		dbHealth, err := h.db.Health(dbCtx)
-		dbHealthy := 0.0
-		if err == nil {
-			dbHealthy = 1.0
-		}
-
-		output += "# HELP smotra_db_healthy Database health status (1 = healthy, 0 = unhealthy)\n"
-		output += "# TYPE smotra_db_healthy gauge\n"
-		output += fmt.Sprintf("smotra_db_healthy %.0f\n", dbHealthy)
-		output += "\n"
-
-		if err == nil {
-			output += "# HELP smotra_db_response_time_ms Database response time in milliseconds\n"
-			output += "# TYPE smotra_db_response_time_ms gauge\n"
-			output += fmt.Sprintf("smotra_db_response_time_ms %.2f\n", float64(dbHealth.ResponseTime.Milliseconds()))
-			output += "\n"
-		}
-	}
 
 	// Go runtime metrics
 	var m runtime.MemStats

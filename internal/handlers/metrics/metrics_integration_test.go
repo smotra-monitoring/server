@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	healthAPI "github.com/smotra-monitoring/server/internal/api/health"
+	"github.com/smotra-monitoring/server/internal/database"
 	"github.com/smotra-monitoring/server/internal/testutil"
 )
 
@@ -13,7 +14,10 @@ func TestPrometheusMetrics_Integration(t *testing.T) {
 	logger, _ := testutil.NewTestLogger()
 	db := testutil.NewMockDatabase()
 
-	handler := NewHandler(logger, db, "1.0.0-integration")
+	handler := NewHandler(logger, "1.0.0-integration")
+
+	// Register the real DBMetrics provider (covers smotra_db_healthy, pool stats)
+	handler.RegisterMetricsProvider(database.NewDBMetrics(db))
 
 	// Register a stub provider that simulates the HTTP metrics provider
 	handler.RegisterMetricsProvider(&stubMetricsProvider{
@@ -61,9 +65,8 @@ func TestPrometheusMetrics_Integration(t *testing.T) {
 
 func TestPrometheusMetricsConcurrency_Integration(t *testing.T) {
 	logger, _ := testutil.NewTestLogger()
-	db := testutil.NewMockDatabase()
 
-	handler := NewHandler(logger, db, "1.0.0")
+	handler := NewHandler(logger, "1.0.0")
 
 	// Simulate concurrent provider registrations
 	done := make(chan bool)

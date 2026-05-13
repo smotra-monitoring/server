@@ -7,15 +7,15 @@ import (
 	"time"
 
 	healthAPI "github.com/smotra-monitoring/server/internal/api/health"
+	"github.com/smotra-monitoring/server/internal/database"
 	"github.com/smotra-monitoring/server/internal/testutil"
 )
 
 func TestNewHandler(t *testing.T) {
 	logger, _ := testutil.NewTestLogger()
-	db := testutil.NewMockDatabase()
 	appVersion := "1.0.0-test"
 
-	handler := NewHandler(logger, db, appVersion)
+	handler := NewHandler(logger, appVersion)
 
 	if handler == nil {
 		t.Fatal("handler is nil")
@@ -28,16 +28,11 @@ func TestNewHandler(t *testing.T) {
 	if handler.logger == nil {
 		t.Error("logger is nil")
 	}
-
-	if handler.db == nil {
-		t.Error("db is nil")
-	}
 }
 
 func TestPrometheusMetrics(t *testing.T) {
 	logger, _ := testutil.NewTestLogger()
-	db := testutil.NewMockDatabase()
-	handler := NewHandler(logger, db, "1.0.0-test")
+	handler := NewHandler(logger, "1.0.0-test")
 
 	// Register stub providers to simulate HTTP and DB metrics
 	handler.RegisterMetricsProvider(&stubMetricsProvider{
@@ -63,7 +58,6 @@ func TestPrometheusMetrics(t *testing.T) {
 	requiredMetrics := []string{
 		"smotra_info",
 		"smotra_uptime_seconds",
-		"smotra_db_healthy",
 		"smotra_go_goroutines",
 		"smotra_go_memory_alloc_bytes",
 		"smotra_agents_registered_total",
@@ -85,12 +79,12 @@ func TestPrometheusMetrics(t *testing.T) {
 
 func TestPrometheusMetricsWithUnhealthyDB(t *testing.T) {
 	logger, _ := testutil.NewTestLogger()
-	db := testutil.NewMockDatabase()
+	handler := NewHandler(logger, "1.0.0")
 
-	// Simulate database error
-	db.ShouldFail = true
-
-	handler := NewHandler(logger, db, "1.0.0")
+	// Simulate database error via DBMetrics provider
+	mockDB := testutil.NewMockDatabase()
+	mockDB.ShouldFail = true
+	handler.RegisterMetricsProvider(database.NewDBMetrics(mockDB))
 
 	ctx := context.Background()
 	resp, err := handler.PrometheusMetrics(ctx, struct{}{})
@@ -114,8 +108,7 @@ func TestPrometheusMetricsWithUnhealthyDB(t *testing.T) {
 
 func TestPrometheusMetricsFormat(t *testing.T) {
 	logger, _ := testutil.NewTestLogger()
-	db := testutil.NewMockDatabase()
-	handler := NewHandler(logger, db, "1.0.0")
+	handler := NewHandler(logger, "1.0.0")
 
 	ctx := context.Background()
 	resp, err := handler.PrometheusMetrics(ctx, struct{}{})
@@ -180,8 +173,7 @@ func (s *stubMetricsProvider) GetMetrics() string {
 
 func TestRegisterMetricsProvider_OutputIncludedInPrometheus(t *testing.T) {
 	logger, _ := testutil.NewTestLogger()
-	db := testutil.NewMockDatabase()
-	handler := NewHandler(logger, db, "1.0.0")
+	handler := NewHandler(logger, "1.0.0")
 
 	stub := &stubMetricsProvider{
 		output: "# HELP custom_counter Custom test counter\n# TYPE custom_counter counter\ncustom_counter 42\n",
@@ -201,8 +193,7 @@ func TestRegisterMetricsProvider_OutputIncludedInPrometheus(t *testing.T) {
 
 func TestRegisterMetricsProvider_MultipleProviders(t *testing.T) {
 	logger, _ := testutil.NewTestLogger()
-	db := testutil.NewMockDatabase()
-	handler := NewHandler(logger, db, "1.0.0")
+	handler := NewHandler(logger, "1.0.0")
 
 	handler.RegisterMetricsProvider(&stubMetricsProvider{output: "provider_a 1\n"})
 	handler.RegisterMetricsProvider(&stubMetricsProvider{output: "provider_b 2\n"})
