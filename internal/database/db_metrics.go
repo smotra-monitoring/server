@@ -58,14 +58,14 @@ func (m *DBMetrics) GetMetrics() string {
 	out += fmt.Sprintf("smotra_db_connections_idle %d\n", dbHealth.DBIdleConns)
 	out += "\n"
 
-	out += "# HELP smotra_db_wait_count_total Total number of times a goroutine waited for a connection\n"
-	out += "# TYPE smotra_db_wait_count_total counter\n"
-	out += fmt.Sprintf("smotra_db_wait_count_total %d\n", dbHealth.DBWaitConnsCount)
+	out += "# HELP smotra_db_wait_connections_count_total Total number of times a goroutine waited for a connection\n"
+	out += "# TYPE smotra_db_wait_connections_count_total counter\n"
+	out += fmt.Sprintf("smotra_db_wait_connections_count_total %d\n", dbHealth.DBWaitConnsCount)
 	out += "\n"
 
-	out += "# HELP smotra_db_wait_duration_ms Total time blocked waiting for a new connection (ms)\n"
-	out += "# TYPE smotra_db_wait_duration_ms counter\n"
-	out += fmt.Sprintf("smotra_db_wait_duration_ms %d\n", dbHealth.DBWaitConnsDuration.Milliseconds())
+	out += "# HELP smotra_db_wait_connections_duration_ms Total time blocked waiting for a new connection (ms)\n"
+	out += "# TYPE smotra_db_wait_connections_duration_ms counter\n"
+	out += fmt.Sprintf("smotra_db_wait_connections_duration_ms %d\n", dbHealth.DBWaitConnsDuration.Milliseconds())
 	out += "\n"
 
 	return out
