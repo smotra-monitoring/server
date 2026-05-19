@@ -540,12 +540,14 @@ func (h *Handler) Oauth2Revoke(ctx context.Context, req api.Oauth2RevokeRequestO
 	providerName := session.Oauth2Provider
 	cfg, cfgErr := h.resolveProvider(providerName)
 	if cfgErr != nil {
+		h.log.WarnContext(ctx, "revoke: unknown provider", slog.String("provider", providerName))
 		warning := fmt.Sprintf("Session revoked. IdP revocation skipped: provider %q not configured", providerName)
 		return api.Oauth2Revoke200JSONResponse{Warning: &warning}, nil
 	}
 
 	endpoints, endErr := h.resolver.resolve(ctx, cfg)
 	if endErr != nil || endpoints.RevocationEndpoint == "" {
+		h.log.WarnContext(ctx, "revoke: provider does not support token revocation", slog.String("provider", providerName))
 		warning := fmt.Sprintf("Session revoked. Provider %q does not support token revocation", providerName)
 		return api.Oauth2Revoke200JSONResponse{Warning: &warning}, nil
 	}
@@ -578,16 +580,13 @@ func (h *Handler) Oauth2Revoke(ctx context.Context, req api.Oauth2RevokeRequestO
 func (h *Handler) AuthRefresh(ctx context.Context, _ api.AuthRefreshRequestObject) (api.AuthRefreshResponseObject, error) {
 	h.refreshTotal.Add(1)
 
-	authInfo, ok := ctx.Value(middleware.AuthContextKey).(*middleware.AuthInfo)
-	if !ok || authInfo == nil || !authInfo.Authenticated || authInfo.SessionID == "" {
-		return api.AuthRefresh401JSONResponse{UnauthorizedJSONResponse: api.UnauthorizedJSONResponse{
-			Error: "unauthorized", Message: "Valid session required",
-		}}, nil
-	}
+	// Authentication is guaranteed by the AuthenticatedHandler wrapper.
+	authInfo := ctx.Value(middleware.AuthContextKey).(*middleware.AuthInfo)
 
 	q := queries.New(h.db.DB())
 	oldSession, err := q.GetSessionByID(ctx, authInfo.SessionID)
 	if err != nil {
+		h.log.WarnContext(ctx, "refresh: session not found for authenticated request", slog.String("session_id", authInfo.SessionID))
 		return api.AuthRefresh401JSONResponse{UnauthorizedJSONResponse: api.UnauthorizedJSONResponse{
 			Error: "unauthorized", Message: "Session not found",
 		}}, nil
@@ -604,8 +603,9 @@ func (h *Handler) AuthRefresh(ctx context.Context, _ api.AuthRefreshRequestObjec
 
 	now := time.Now().UTC()
 	newExpiresAt := now.Add(7 * 24 * time.Hour)
-	if newExpiresAt.After(oldSession.AbsoluteExpiresAt) {
-		newExpiresAt = oldSession.AbsoluteExpiresAt
+	absoluteExpiresAt := now.Add(90 * 24 * time.Hour)
+	if newExpiresAt.After(absoluteExpiresAt) {
+		newExpiresAt = absoluteExpiresAt
 	}
 
 	// Create new session inheriting IDP tokens from old session.
@@ -614,7 +614,7 @@ func (h *Handler) AuthRefresh(ctx context.Context, _ api.AuthRefreshRequestObjec
 		UserID:             oldSession.UserID,
 		TokenHash:          tokenHash,
 		ExpiresAt:          newExpiresAt,
-		AbsoluteExpiresAt:  oldSession.AbsoluteExpiresAt,
+		AbsoluteExpiresAt:  absoluteExpiresAt,
 		Oauth2Provider:     oldSession.Oauth2Provider,
 		Oauth2AccessToken:  oldSession.Oauth2AccessToken,
 		Oauth2RefreshToken: oldSession.Oauth2RefreshToken,
@@ -637,7 +637,7 @@ func (h *Handler) AuthRefresh(ctx context.Context, _ api.AuthRefreshRequestObjec
 
 	return api.AuthRefresh200JSONResponse(api.TokenResponse{
 		OpaqueToken:       plaintext,
-		AbsoluteExpiresAt: oldSession.AbsoluteExpiresAt,
+		AbsoluteExpiresAt: absoluteExpiresAt,
 	}), nil
 }
 
@@ -648,12 +648,8 @@ func (h *Handler) AuthRefresh(ctx context.Context, _ api.AuthRefreshRequestObjec
 func (h *Handler) GetUserInfo(ctx context.Context, _ api.GetUserInfoRequestObject) (api.GetUserInfoResponseObject, error) {
 	h.userInfoTotal.Add(1)
 
-	authInfo, ok := ctx.Value(middleware.AuthContextKey).(*middleware.AuthInfo)
-	if !ok || authInfo == nil || !authInfo.Authenticated || authInfo.UserID == "" {
-		return api.GetUserInfo401JSONResponse{UnauthorizedJSONResponse: api.UnauthorizedJSONResponse{
-			Error: "unauthorized", Message: "Valid session required",
-		}}, nil
-	}
+	// Authentication is guaranteed by the AuthenticatedHandler wrapper.
+	authInfo := ctx.Value(middleware.AuthContextKey).(*middleware.AuthInfo)
 
 	q := queries.New(h.db.DB())
 	user, err := q.GetUserByID(ctx, authInfo.UserID)
@@ -690,25 +686,33 @@ func (h *Handler) GetUserInfo(ctx context.Context, _ api.GetUserInfoRequestObjec
 func (h *Handler) Logout(ctx context.Context, req api.LogoutRequestObject) (api.LogoutResponseObject, error) {
 	h.logoutTotal.Add(1)
 
-	// Get session from context (populated by OAuth2Auth middleware).
-	authInfo, ok := ctx.Value(middleware.AuthContextKey).(*middleware.AuthInfo)
-	if ok && authInfo != nil && authInfo.SessionID != "" {
+	// Authentication is guaranteed by the AuthenticatedHandler wrapper.
+	// Fetch the full session record before revoking so we can pass id_token_hint
+	// to the IDP end-session endpoint (required by OIDC RP-Initiated Logout spec).
+	var idTokenHint string
+	authInfo := ctx.Value(middleware.AuthContextKey).(*middleware.AuthInfo)
+	if authInfo.SessionID != "" {
 		q := queries.New(h.db.DB())
+
+		if session, err := q.GetSessionByID(ctx, authInfo.SessionID); err == nil {
+			if session.Oauth2IDToken.Valid {
+				idTokenHint = session.Oauth2IDToken.String
+			}
+		}
 		_ = q.RevokeSession(ctx, authInfo.SessionID)
 	}
 
 	// Resolve IDP end-session URL from session provider.
-	providerName := ""
-	if ok && authInfo != nil {
-		providerName = authInfo.Provider
-	}
+	providerName := authInfo.Provider
 	if providerName == "" {
+		h.log.InfoContext(ctx, "logout: unknown provider name", slog.String("provider", providerName))
 		msg := "Logged out."
 		return api.Logout200JSONResponse{Message: &msg}, nil
 	}
 
 	cfg, err := h.resolveProvider(providerName)
 	if err != nil {
+		h.log.WarnContext(ctx, "logout: unknown provider", slog.String("provider", providerName))
 		msg := "Logged out."
 		return api.Logout200JSONResponse{Message: &msg}, nil
 	}
@@ -721,6 +725,9 @@ func (h *Handler) Logout(ctx context.Context, req api.LogoutRequestObject) (api.
 	}
 
 	params := url.Values{}
+	if idTokenHint != "" {
+		params.Set("id_token_hint", idTokenHint)
+	}
 	if req.Body != nil && req.Body.PostLogoutRedirectUri != nil {
 		params.Set("post_logout_redirect_uri", *req.Body.PostLogoutRedirectUri)
 	}

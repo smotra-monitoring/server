@@ -282,20 +282,6 @@ func TestOauth2Revoke_UnknownToken_Returns200(t *testing.T) {
 
 // ─── GetUserInfo ──────────────────────────────────────────────────────────────
 
-// TestGetUserInfo_NoSession verifies that a missing/unauthenticated session returns 401.
-func TestGetUserInfo_NoSession_Returns401(t *testing.T) {
-	h := newTestHandler(t, "http://idp.test")
-
-	// No AuthInfo in context
-	resp, err := h.GetUserInfo(context.Background(), api.GetUserInfoRequestObject{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if _, ok := resp.(api.GetUserInfo401JSONResponse); !ok {
-		t.Errorf("expected 401, got %T", resp)
-	}
-}
-
 // TestGetUserInfo_AuthenticatedButMissingUser verifies that an authenticated session
 // with a non-existent user_id returns 401.
 func TestGetUserInfo_AuthenticatedButMissingUser_Returns401(t *testing.T) {
