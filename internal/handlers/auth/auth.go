@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -325,7 +326,8 @@ func (h *Handler) Oauth2Token(ctx context.Context, req api.Oauth2TokenRequestObj
 	idpResp, err := h.postForm(ctx, endpoints.TokenEndpoint, form)
 	if err != nil {
 		h.idpErrorTotal.Add(1)
-		h.log.ErrorContext(ctx, "token request to IdP failed", slog.String("provider", providerName), slog.String("error", err.Error()))
+		body, _ := io.ReadAll(idpResp.Body)
+		h.log.ErrorContext(ctx, "token request to IdP failed", slog.String("provider", providerName), slog.String("error", err.Error()), slog.String("body", string(body)))
 		return api.Oauth2Token400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{
 			Error: "idp_error", Message: "Identity provider token request failed",
 		}}, nil
@@ -334,9 +336,11 @@ func (h *Handler) Oauth2Token(ctx context.Context, req api.Oauth2TokenRequestObj
 
 	if idpResp.StatusCode != http.StatusOK {
 		h.idpErrorTotal.Add(1)
+		body, _ := io.ReadAll(idpResp.Body)
 		h.log.WarnContext(ctx, "IdP returned error for token request",
 			slog.String("provider", providerName),
 			slog.Int("status", idpResp.StatusCode),
+			slog.String("body", string(body)),
 		)
 		return api.Oauth2Token401JSONResponse{UnauthorizedJSONResponse: api.UnauthorizedJSONResponse{
 			Error: "idp_error", Message: "Identity provider rejected the token request",
