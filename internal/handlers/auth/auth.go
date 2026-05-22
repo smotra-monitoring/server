@@ -362,7 +362,10 @@ func (h *Handler) Oauth2Token(ctx context.Context, req api.Oauth2TokenRequestObj
 	// Extract user identity from id_token (OIDC) or access token claims.
 	sub, displayName, email, avatarURL := extractUserClaims(idpTok.IDToken, idpTok.AccessToken, providerName)
 	if sub == "" {
-		h.log.WarnContext(ctx, "could not extract subject from IdP token", slog.String("provider", providerName))
+		h.log.WarnContext(ctx, "could not extract subject from IdP token",
+			slog.String("provider", providerName),
+			slog.String("id_token (JWT)", idpTok.IDToken),
+		)
 		return api.Oauth2Token401JSONResponse{UnauthorizedJSONResponse: api.UnauthorizedJSONResponse{
 			Error: "invalid_token", Message: "Could not determine user identity from IdP token",
 		}}, nil
