@@ -180,12 +180,12 @@ func (h *Handler) Oauth2Authorize(ctx context.Context, req api.Oauth2AuthorizeRe
 	// Persist the pending state so /token can retrieve the provider name.
 	q := queries.New(h.db.DB())
 	stateID := uuid.Must(uuid.NewV7()).String()
-	expiresAt := time.Now().Add(10 * time.Minute)
+	expiresAt_utc := time.Now().Add(10 * time.Minute).UTC() // pending states are short-lived and single-use, so 10m is generous
 	if err := q.CreatePendingState(ctx, queries.CreatePendingStateParams{
 		ID:        stateID,
 		State:     req.Params.State,
 		Provider:  providerName,
-		ExpiresAt: expiresAt,
+		ExpiresAt: expiresAt_utc,
 	}); err != nil {
 		// Non-fatal if duplicate state (unlikely); log and continue
 		h.log.WarnContext(ctx, "failed to persist pending state", slog.String("error", err.Error()))
