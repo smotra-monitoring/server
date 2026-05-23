@@ -65,15 +65,16 @@ type Handler struct {
 	allowPrivateHosts bool // set in tests to skip SSRF validation
 
 	// Metrics
-	authorizeTotal  atomic.Uint64
-	callbackTotal   atomic.Uint64
-	tokenTotal      atomic.Uint64
-	revokeTotal     atomic.Uint64
-	userInfoTotal   atomic.Uint64
-	logoutTotal     atomic.Uint64
-	refreshTotal    atomic.Uint64
-	unknownProvider atomic.Uint64
-	idpErrorTotal   atomic.Uint64
+	authorizeTotal        atomic.Uint64
+	callbackTotal         atomic.Uint64
+	tokenTotal            atomic.Uint64
+	revokeTotal           atomic.Uint64
+	userInfoTotal         atomic.Uint64
+	logoutTotal           atomic.Uint64
+	refreshTotal          atomic.Uint64
+	unknownProvider       atomic.Uint64
+	idpErrorTotal         atomic.Uint64
+	userInfoFallbackTotal atomic.Uint64
 }
 
 // NewHandler creates a new auth handler.
@@ -361,6 +362,24 @@ func (h *Handler) Oauth2Token(ctx context.Context, req api.Oauth2TokenRequestObj
 
 	// Extract user identity from id_token (OIDC) or access token claims.
 	sub, displayName, email, avatarURL := extractUserClaims(idpTok.IDToken, idpTok.AccessToken, providerName)
+	// Fallback: if JWT extraction yielded no subject (e.g. provider returned an opaque
+	// access token), fetch identity directly from the OIDC userinfo endpoint.
+	if sub == "" && endpoints.UserInfoEndpoint != "" {
+		h.userInfoFallbackTotal.Add(1)
+		var userInfoErr error
+		sub, displayName, email, avatarURL, userInfoErr = h.fetchUserInfoFromIDP(ctx, idpTok.AccessToken, endpoints.UserInfoEndpoint, providerName)
+		if userInfoErr != nil {
+			h.idpErrorTotal.Add(1)
+			h.log.WarnContext(ctx, "userinfo endpoint fetch failed",
+				slog.String("provider", providerName),
+				slog.String("userinfo_url", endpoints.UserInfoEndpoint),
+				slog.String("error", userInfoErr.Error()),
+			)
+			return api.Oauth2Token401JSONResponse{UnauthorizedJSONResponse: api.UnauthorizedJSONResponse{
+				Error: "invalid_token", Message: "Could not fetch user identity from userinfo endpoint",
+			}}, nil
+		}
+	}
 	if sub == "" {
 		h.log.WarnContext(ctx, "could not extract subject from IdP token",
 			slog.String("provider", providerName),
@@ -753,6 +772,69 @@ func (h *Handler) Logout(ctx context.Context, req api.LogoutRequestObject) (api.
 
 // ─── helpers ───────────────────────────────────────────────────────────────────
 
+// fetchUserInfoFromIDP fetches user identity claims from the provider's userinfo endpoint.
+// Used as a fallback when extractUserClaims cannot parse a JWT (e.g. opaque access tokens).
+// GitHub's numeric "id" field is mapped to sub when no standard "sub" claim is present.
+func (h *Handler) fetchUserInfoFromIDP(ctx context.Context, accessToken, userInfoURL, provider string) (sub, displayName, email, avatarURL string, err error) {
+	if !h.allowPrivateHosts {
+		if err = validateProviderURL(userInfoURL); err != nil {
+			return "", "", "", "", fmt.Errorf("SSRF check failed for userinfo endpoint %q: %w", userInfoURL, err)
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, userInfoURL, nil)
+	if err != nil {
+		return "", "", "", "", fmt.Errorf("failed to build userinfo request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := h.client.Do(req)
+	if err != nil {
+		return "", "", "", "", fmt.Errorf("userinfo request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return "", "", "", "", fmt.Errorf("userinfo endpoint returned status %d: %s", resp.StatusCode, body)
+	}
+
+	var claims map[string]any
+	if err := json.Unmarshal(body, &claims); err != nil {
+		return "", "", "", "", fmt.Errorf("failed to decode userinfo response: %w", err)
+	}
+
+	if v, ok := claims["sub"].(string); ok {
+		sub = v
+	}
+	// GitHub uses a numeric "id" and a string "login" instead of standard OIDC claims.
+	if provider == "github" {
+		if v, ok := claims["login"].(string); ok && displayName == "" {
+			displayName = v
+		}
+		if sub == "" {
+			if v, ok := claims["id"]; ok {
+				sub = fmt.Sprintf("%v", v)
+			}
+		}
+	}
+	for _, key := range []string{"name", "preferred_username", "nickname", "email"} {
+		if v, ok := claims[key].(string); ok && displayName == "" {
+			displayName = v
+		}
+	}
+	if v, ok := claims["email"].(string); ok {
+		email = v
+	}
+	for _, key := range []string{"picture", "avatar_url"} {
+		if v, ok := claims[key].(string); ok && avatarURL == "" {
+			avatarURL = v
+		}
+	}
+	return sub, displayName, email, avatarURL, nil
+}
+
 // postForm performs a URL-encoded form POST to the given endpoint.
 func (h *Handler) postForm(ctx context.Context, endpoint string, form url.Values) (*http.Response, error) {
 	if !h.allowPrivateHosts {
@@ -823,6 +905,11 @@ func (h *Handler) GetMetrics() string {
 	metrics += "# HELP auth_idp_error_total Total number of IDP errors\n"
 	metrics += "# TYPE auth_idp_error_total counter\n"
 	metrics += fmt.Sprintf("auth_idp_error_total %d\n", h.idpErrorTotal.Load())
+	metrics += "\n"
+
+	metrics += "# HELP auth_userinfo_fallback_total Total number of userinfo endpoint fallback fetches\n"
+	metrics += "# TYPE auth_userinfo_fallback_total counter\n"
+	metrics += fmt.Sprintf("auth_userinfo_fallback_total %d\n", h.userInfoFallbackTotal.Load())
 	metrics += "\n"
 
 	metrics += "\n"
