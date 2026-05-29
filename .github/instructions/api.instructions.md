@@ -85,7 +85,7 @@ Note: `auth/` handlers are registered through `APIHandler` but do **not** requir
 **Handler files per package:**
 - `<name>.go` — implementation
 - `<name>_test.go` — unit tests
-- `<name>_integration_test.go` — integration tests; each integration test function must begin with `if testing.Short() { t.Skip("Skipping integration test in short mode") }`
+- `<name>_integration_test.go` — integration tests
 
 Each handler tracks metrics using `atomic.Uint64` counters (see metrics.instructions.md).
 
