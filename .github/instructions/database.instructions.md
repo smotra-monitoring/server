@@ -9,7 +9,7 @@ applyTo: "internal/database/**,data/db/**,data/prod/**"
 - **Production**: PostgreSQL + TimescaleDB for time-series data
 - **Development/Testing**: SQLite for simplicity
 - Database access must be implemented via **interface abstractions** to allow easy swapping of backends
-- Schema managed using `go-migrate`
+- Schema managed using `golang-migrate` (`migrate` CLI); run via `just init-db`
 
 ## UUIDv7 Requirement
 

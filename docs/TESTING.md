@@ -103,13 +103,13 @@ go test ./...
 ### Unit Tests Only
 
 ```bash
-go test -short ./...
+go test ./...
 ```
 
 ### Integration Tests Only
 
 ```bash
-go test -tags=integration ./...
+go test ./... 
 ```
 
 ### With Verbose Output
@@ -142,7 +142,7 @@ go test -cover ./...
 The project Makefile includes convenient commands for running tests:
 
 ```bash
-# Run all tests
+# Run all tests (unit + integration)
 just test
 
 # Run unit tests only
@@ -175,7 +175,7 @@ Unit tests are located alongside the code they test, following the Go convention
 
 ### Integration Tests
 
-Integration tests are tagged with `// +build integration` and test real integrations:
+Integration tests use `testing.Short()` to self-skip when the `-short` flag is passed:
 - Database operations with actual SQLite databases
 - HTTP handlers with real HTTP servers
 - End-to-end workflows
@@ -215,9 +215,10 @@ func TestMyFunction(t *testing.T) {
 ### Integration Test Example
 
 ```go
-// +build integration
-
 func TestDatabaseIntegration(t *testing.T) {
+    if testing.Short() {
+        t.Skip("Skipping integration test in short mode")
+    }
     db := testutil.SetupTestSQLiteDB(t)
     
     // Test database operations
@@ -253,7 +254,7 @@ go test -coverprofile=coverage.out ./...    # Generate coverage
 4. **Cleanup**: Use `t.Cleanup()` for resource cleanup
 5. **Temporary Resources**: Use `t.TempDir()` for temporary files/directories
 6. **Mock Dependencies**: Use mocks for external dependencies in unit tests
-7. **Integration Tests**: Tag with `// +build integration` at the top of the file
+7. **Integration Tests**: Add `if testing.Short() { t.Skip(...) }` at the start of each integration test function
 8. **Error Messages**: Provide clear error messages in assertions
 
 ## Troubleshooting
