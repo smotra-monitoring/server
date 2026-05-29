@@ -120,14 +120,14 @@ Metrics **must always** be implemented when new features are added, according to
 
 Tests **must always** be written or updated alongside code changes:
 
-- **New features**: add unit tests and integration tests covering the new behaviour
+- **New features**: add unit tests (`<name>_test.go`) and integration tests (`<name>_integration_test.go`) covering the new behaviour
 - **Bug fixes**: add a regression test that fails without the fix before adding the fix
 - Each handler package must include `<name>_test.go` (unit) and `<name>_integration_test.go` (integration)
 - Tests live next to the code they test — no separate `tests/` top-level folder
 
 ## Documentation Guidelines
 
-When implementing significant new features or workflows, they must be documented in the docs/ folder:
+When implementing new features or workflows, they must be documented in the docs/ folder:
 
 1. **New Features**: Update docs/features/ with:
    - Feature description and purpose
