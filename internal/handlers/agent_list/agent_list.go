@@ -80,7 +80,7 @@ func (h *Handler) Handle(ctx context.Context, req api.ListAgentsRequestObject) (
 
 	// Parse and clamp pagination parameters.
 	page := defaultPage
-	if req.Params.Page != nil && *req.Params.Page >= minPageSize {
+	if req.Params.Page != nil && *req.Params.Page >= 1 {
 		page = *req.Params.Page
 	}
 
